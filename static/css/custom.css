@@ -1,0 +1,14 @@
+/* Estilos personalizados para o sistema Nova Mecânica */
+:root {
+    --primary-color: #0f172a;
+    --accent-color: #f59e0b;
+}
+
+.custom-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}

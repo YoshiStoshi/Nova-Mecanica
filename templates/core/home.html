@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Início | {{ sistema }}{% endblock %}
+
+{% block content %}
+<div class="row align-items-center justify-content-center py-5">
+    <div class="col-lg-8 text-center">
+        <div class="p-5 bg-white rounded-4 shadow-sm border">
+            <div class="display-4 text-warning mb-3">
+                <i class="bi bi-gear-wide-connected"></i>
+            </div>
+            <h1 class="fw-bold mb-3">Bem-vindo ao Sistema {{ sistema }}</h1>
+            <p class="lead text-muted mb-4">
+                Estrutura Django e banco de dados PostgreSQL prontos para o início do desenvolvimento!
+            </p>
+            
+            <hr class="my-4">
+
+            <div class="row g-3 text-start mt-2">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold text-primary">
+                                <i class="bi bi-database-check me-2"></i>PostgreSQL 14
+                            </h6>
+                            <p class="card-text small text-muted">
+                                Conectado ao banco <code>NovaMecDB</code> com migrações aplicadas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold text-success">
+                                <i class="bi bi-layout-text-window-reverse me-2"></i>Templates Base
+                            </h6>
+                            <p class="card-text small text-muted">
+                                Layout padrão compartilhado com Bootstrap 5 configurado para a equipe.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold text-dark">
+                                <i class="bi bi-diagram-3 me-2"></i>App Core
+                            </h6>
+                            <p class="card-text small text-muted">
+                                Módulo pronto para receber os modelos (Clientes, Veículos, OS).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-2">
+                <a href="/admin/" class="btn btn-warning px-4 py-2 fw-semibold me-2" target="_blank">
+                    <i class="bi bi-speedometer2 me-1"></i>Acessar Painel Admin
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
