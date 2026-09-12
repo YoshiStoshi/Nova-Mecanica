@@ -1,83 +1,106 @@
-# 🛠️ Nova Mecanica
+# Nova Mecânica
 
-Trabalho prático para a matéria de **Laboratório de Software 3**.  
-Sistema de gestão para oficina mecânica desenvolvido utilizando **Python** e **Django**.
+Sistema de gestão para oficina mecânica, desenvolvido para auxiliar no gerenciamento dos processos e informações de uma oficina. O projeto foi desenvolvido utilizando Python e Django como parte da disciplina de Laboratório de Software 3.
 
----
+**Deploy:** ainda não publicado
+**Equipe:** [Rodrigo de Azevedo Junior 2840482421044 — 
+João Gabriel Cardoso Martarello 2840482421028 — 
+Felipe Delchiaro Malzoni 2840482421025 — 
+Antônio de Brito Soares 2840482421035 c
+Carlos Chen [RA] ] · Laboratório de Engenharia de Software · ADS Fatec Ribeirão Preto
 
-## 📋 Pré-requisitos
+## Stack
 
-Antes de começar, certifique-se de ter instalado em sua máquina:
-- **Python 3.10 ou superior**: [Download Python](https://www.python.org/downloads/)
-- **Git**: [Download Git](https://git-scm.com/)
-- **PostgreSQL 14 ou superior** (ou SQLite para testes rápidos): [Download PostgreSQL](https://www.postgresql.org/download/)
+* **Frontend:** Django Templates / HTML, CSS e JavaScript
+* **Backend:** Python 3.10+ / Django
+* **Banco de dados:** PostgreSQL 14+ (SQLite disponível para testes)
 
----
+## Como rodar localmente
 
-## 🚀 Passo a Passo para Executar o Projeto
+### Pré-requisitos
 
-Siga os passos abaixo para configurar e rodar o projeto na sua máquina local:
+Antes de executar o projeto, certifique-se de ter instalado:
 
-### 1. Clonar o Repositório
-Abra o terminal (Prompt de Comando ou PowerShell) e rode:
+* **Python 3.10 ou superior**
+* **Git**
+* **PostgreSQL 14 ou superior**
+
+  * SQLite pode ser utilizado para testes rápidos, caso configurado no projeto.
+
+### Passo a passo
+
+1. Clone o repositório:
+
 ```bash
 git clone <URL_DO_REPOSITORIO>
 cd "Nova Mecanica"
 ```
 
----
+2. Crie e ative o ambiente virtual:
 
-### 2. Criar e Ativar o Ambiente Virtual (`.venv`)
+**Windows — PowerShell:**
 
-O ambiente virtual isola as dependências do projeto para evitar conflitos na sua máquina.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate
+```
 
-- **No Windows (PowerShell):**
-  ```powershell
-  python -m venv .venv
-  .\.venv\Scripts\Activate
-  ```
-  *(Se ocorrer erro de permissão no PowerShell, execute primeiro: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`)*
+Caso ocorra um erro de permissão no PowerShell:
 
-- **No Linux ou macOS:**
-  ```bash
-  python3 -m venv .venv
-  source .venv/bin/activate
-  ```
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
 
-> 💡 **Nota:** Ao ativar com sucesso, o identificador `(.venv)` aparecerá no início da linha do seu terminal.
+**Linux/macOS:**
 
----
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-### 3. Instalar as Dependências
+3. Instale as dependências:
 
-Com o ambiente virtual ativado, instale todas as bibliotecas necessárias do projeto:
 ```bash
 pip install -r requirements.txt
 ```
 
----
+4. Configure as variáveis de ambiente.
 
-### 4. Configurar as Variáveis de Ambiente (`.env`)
+Copie o arquivo `.env.example` para `.env`:
 
-Copie o arquivo de exemplo `.env.example` para criar o seu arquivo `.env`:
+**Windows:**
 
-- **No Windows (CMD/PowerShell):**
-  ```powershell
-  copy .env.example .env
-  ```
-- **No Linux ou macOS:**
-  ```bash
-  cp .env.example .env
-  ```
+```powershell
+copy .env.example .env
+```
 
-Abra o arquivo `.env` gerado e verifique se as credenciais do seu banco de dados estão corretas:
+**Linux/macOS:**
+
+```bash
+cp .env.example .env
+```
+
+Preencha o arquivo `.env` com as configurações necessárias:
+
+| Variável        | Descrição                                           |
+| --------------- | --------------------------------------------------- |
+| `SECRET_KEY`    | Chave secreta utilizada pelo Django                 |
+| `DEBUG`         | Define se o modo de desenvolvimento está habilitado |
+| `ALLOWED_HOSTS` | Hosts permitidos pela aplicação                     |
+| `DB_ENGINE`     | Engine utilizada pelo banco de dados                |
+| `DB_NAME`       | Nome do banco de dados                              |
+| `DB_USER`       | Usuário do banco de dados                           |
+| `DB_PASSWORD`   | Senha do banco de dados                             |
+| `DB_HOST`       | Endereço do servidor do banco                       |
+| `DB_PORT`       | Porta utilizada pelo banco                          |
+
+Exemplo de configuração para PostgreSQL:
 
 ```env
 SECRET_KEY=django-insecure-sua-chave-aqui
 DEBUG=True
-ALLOWED_HOSTS=127.0.0.1, localhost
+ALLOWED_HOSTS=127.0.0.1,localhost
 
-# Para PostgreSQL:
 DB_ENGINE=django.db.backends.postgresql
 DB_NAME=NovaMecDB
 DB_USER=postgres
@@ -86,65 +109,106 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
-> 📌 **Importante:** Certifique-se de que o banco de dados `NovaMecDB` já foi criado no seu PostgreSQL (via pgAdmin ou comando SQL `CREATE DATABASE "NovaMecDB";`).
+5. Crie o banco de dados no PostgreSQL.
 
----
+O banco utilizado pelo exemplo acima é `NovaMecDB`. Ele pode ser criado pelo pgAdmin ou através do SQL:
 
-### 5. Aplicar as Migrações no Banco de Dados
+```sql
+CREATE DATABASE "NovaMecDB";
+```
 
-Rode o comando abaixo para criar as tabelas no banco de dados:
+6. Execute as migrations:
+
 ```bash
 python manage.py migrate
 ```
 
----
+7. Crie um usuário administrador para acessar o Django Admin:
 
-### 6. Criar um Usuário Administrador (Superusuário)
-
-Para ter acesso ao painel administrativo do Django:
 ```bash
 python manage.py createsuperuser
 ```
-Preencha o nome de usuário, e-mail e senha conforme instruído no terminal.
 
----
+Siga as instruções exibidas no terminal para definir usuário, e-mail e senha.
 
-### 7. Iniciar o Servidor de Desenvolvimento
+8. Inicie o servidor de desenvolvimento:
 
-Agora basta iniciar o servidor local:
 ```bash
 python manage.py runserver
 ```
 
-Acesse no seu navegador:
-- **Aplicação Principal:** `http://127.0.0.1:8000/`
-- **Painel Administrativo:** `http://127.0.0.1:8000/admin/`
+9. Acesse a aplicação:
 
----
+* **Aplicação:** `http://127.0.0.1:8000/`
+* **Painel administrativo:** `http://127.0.0.1:8000/admin/`
 
-## 📁 Estrutura do Projeto
+## Estrutura do repositório
 
 ```text
 Nova Mecanica/
-├── .venv/               # Ambiente virtual com pacotes Python (não vai pro Git)
-├── core/                # App principal da aplicação (models, views, templates)
-├── setup/               # Configurações globais do Django (settings.py, urls.py)
-├── .env                 # Suas variáveis de ambiente locais (não vai pro Git)
-├── .env.example         # Modelo para criação do arquivo .env
-├── .gitignore           # Arquivos ignorados pelo Git
-├── manage.py            # Utilitário de linha de comando do Django
-├── README.md            # Documentação e guia do projeto
-└── requirements.txt     # Lista de dependências Python do projeto
+├── core/                — App principal da aplicação
+│   ├── models.py        — Modelos e estruturas de dados
+│   ├── views.py         — Regras de controle das páginas
+│   └── templates/       — Templates da aplicação
+│
+├── setup/               — Configurações globais do Django
+│   ├── settings.py      — Configurações do projeto
+│   └── urls.py          — Rotas principais
+│
+├── .venv/               — Ambiente virtual Python (não versionado)
+├── .env                 — Variáveis de ambiente locais (não versionado)
+├── .env.example         — Modelo das variáveis de ambiente
+├── .gitignore           — Arquivos ignorados pelo Git
+├── manage.py            — Utilitário de gerenciamento do Django
+├── requirements.txt     — Dependências do projeto
+└── README.md            — Documentação do projeto
 ```
 
----
+## Convenções da equipe
 
-## 💡 Dicas para o Trabalho em Grupo (Git & Django)
+* **Branches:** utilizar o padrão `feature/nome-da-feature` para novas funcionalidades.
+* **Commits:** recomenda-se utilizar o padrão **Conventional Commits**.
+* **Pull Requests:** toda PR deve passar pela revisão de pelo menos 1 integrante da equipe antes do merge.
+* **Ambiente virtual:** sempre utilizar o `.venv` durante o desenvolvimento.
+* **Variáveis de ambiente:** nunca versionar o arquivo `.env`.
+* **Dependências:** ao adicionar uma nova biblioteca, atualizar o `requirements.txt`.
 
-1. **Sempre ative o `.venv`** antes de começar a trabalhar no projeto.
-2. **Ao atualizar o código do Git (`git pull`):**
-   - Se novos pacotes foram adicionados, rode: `pip install -r requirements.txt`
-   - Se as tabelas/modelos foram alterados, rode: `python manage.py migrate`
-3. **Ao instalar um novo pacote (`pip install nome-do-pacote`):**
-   - Atualize a lista de dependências para o grupo rodando: `pip freeze > requirements.txt`
-4. **Nunca suba o arquivo `.env` para o Git.** Ele contém senhas e chaves locais e já está configurado no `.gitignore`.
+### Atualização do projeto
+
+Após executar:
+
+```bash
+git pull
+```
+
+verifique se é necessário atualizar as dependências:
+
+```bash
+pip install -r requirements.txt
+```
+
+Caso tenham ocorrido alterações nos modelos do banco:
+
+```bash
+python manage.py migrate
+```
+
+Ao instalar uma nova dependência, atualize o arquivo:
+
+```bash
+pip freeze > requirements.txt
+```
+
+## Testes
+
+Para executar os testes automatizados do Django:
+
+```bash
+python manage.py test
+```
+
+## Licença / Uso acadêmico
+
+Projeto desenvolvido para a disciplina de **Laboratório de Software 3 — Laboratório de Engenharia de Software**, do curso de **Análise e Desenvolvimento de Sistemas (ADS)** da **Fatec Ribeirão Preto**, em 2026.
+
+O projeto possui finalidade acadêmica.
