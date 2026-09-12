@@ -10,7 +10,7 @@ Sistema de gestão para oficina mecânica desenvolvido utilizando **Python** e *
 Antes de começar, certifique-se de ter instalado em sua máquina:
 - **Python 3.10 ou superior**: [Download Python](https://www.python.org/downloads/)
 - **Git**: [Download Git](https://git-scm.com/)
-- **PostgreSQL 14** (ou SQLite para testes rápidos): [Download PostgreSQL](https://www.postgresql.org/download/)
+- **PostgreSQL 14 ou superior** (ou SQLite para testes rápidos): [Download PostgreSQL](https://www.postgresql.org/download/)
 
 ---
 
