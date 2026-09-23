@@ -7,7 +7,7 @@ Sistema de gestão para oficina mecânica, desenvolvido para auxiliar no gerenci
 João Gabriel Cardoso Martarello 2840482421028 — 
 Felipe Delchiaro Malzoni 2840482421025 — 
 Antônio de Brito Soares 2840482421035 c
-Carlos Chen [RA] ] · Laboratório de Engenharia de Software · ADS Fatec Ribeirão Preto
+Carlos Chen 2840482421030] · Laboratório de Engenharia de Software · ADS Fatec Ribeirão Preto
 
 ## Stack
 
