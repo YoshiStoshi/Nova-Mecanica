@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Veículos | Nova Mecânica{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><h1 class="h3">Veículos</h1>{% if perms.core.add_veiculo %}<a class="btn btn-warning" href="{% url 'core:veiculo_criar' %}">Cadastrar veículo</a>{% endif %}</div>
+<div class="table-responsive bg-white rounded border"><table class="table table-hover mb-0">
+    <caption class="px-3">Veículos e seus proprietários</caption>
+    <thead><tr><th scope="col">Placa</th><th scope="col">Cliente</th><th scope="col">Marca / modelo</th><th scope="col">Ano</th></tr></thead>
+    <tbody>{% for veiculo in veiculos %}<tr><td>{{ veiculo.placa }}</td><td>{{ veiculo.cliente.nome }}</td><td>{{ veiculo.marca }} {{ veiculo.modelo }}</td><td>{{ veiculo.ano|stringformat:'d' }}</td></tr>{% empty %}<tr><td colspan="4">Nenhum veículo cadastrado.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

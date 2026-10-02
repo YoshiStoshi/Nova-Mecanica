@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}OS #{{ ordem.pk }} | Nova Mecânica{% endblock %}
+{% block content %}
+{% if erro_operacao %}<div class="alert alert-danger" role="alert">{{ erro_operacao }}</div>{% endif %}
+<a href="{% url 'core:ordens' %}">Voltar às ordens</a>
+<h1 class="h3 mt-3">OS #{{ ordem.pk }} <span class="badge text-bg-secondary">{{ ordem.get_status_display }}</span></h1>
+<p>{{ ordem.cliente.nome }} · {{ ordem.veiculo }}</p>
+{% if ordem.status != 'pendente' %}<div class="alert alert-info">Os itens e o desconto só podem ser alterados enquanto a OS estiver pendente.</div>{% endif %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <h2 class="h5">Peças</h2>
+        <div class="table-responsive"><table class="table bg-white">
+            <thead><tr><th scope="col">Peça</th><th scope="col">Qtd.</th><th scope="col">Preço unitário</th><th scope="col">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+            <tbody>{% for item in itens_peca %}<tr><td>{{ item.peca.descricao }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario_historico|floatformat:2 }}</td><td>R$ {{ item.subtotal|floatformat:2 }}</td><td>{% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itempeca %}<form method="post" action="{% url 'core:ordem_peca_remover' ordem.pk item.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remover {{ item.peca.descricao }}">Remover</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">Nenhuma peça incluída.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itempeca %}
+        <form method="post" action="{% url 'core:ordem_peca_adicionar' ordem.pk %}" class="card card-body mb-4">{% csrf_token %}{% include 'includes/form_fields.html' with form=peca_form %}<button type="submit" class="btn btn-outline-dark align-self-start">Incluir peça</button></form>
+        {% endif %}
+        <h2 class="h5">Serviços</h2>
+        <div class="table-responsive"><table class="table bg-white">
+            <thead><tr><th scope="col">Serviço</th><th scope="col">Qtd.</th><th scope="col">Preço unitário</th><th scope="col">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+            <tbody>{% for item in itens_servico %}<tr><td>{{ item.servico.descricao }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario_historico|floatformat:2 }}</td><td>R$ {{ item.subtotal|floatformat:2 }}</td><td>{% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itemservico %}<form method="post" action="{% url 'core:ordem_servico_remover' ordem.pk item.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remover {{ item.servico.descricao }}">Remover</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">Nenhum serviço incluído.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itemservico %}
+        <form method="post" action="{% url 'core:ordem_servico_adicionar' ordem.pk %}" class="card card-body">{% csrf_token %}{% include 'includes/form_fields.html' with form=servico_form %}<button type="submit" class="btn btn-outline-dark align-self-start">Incluir serviço</button></form>
+        {% endif %}
+    </div>
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h2 class="h5">Resumo</h2>
+        <dl><dt>Subtotal</dt><dd>R$ {{ ordem.subtotal|floatformat:2 }}</dd><dt>Desconto ({{ ordem.desconto_percentual|floatformat:2 }}%)</dt><dd>R$ {{ ordem.valor_desconto|floatformat:2 }}</dd><dt>Total</dt><dd class="fs-4 fw-bold">R$ {{ ordem.total|floatformat:2 }}</dd></dl>
+        {% if ordem.status == 'pendente' and perms.core.change_ordemservico %}
+        <form method="post" action="{% url 'core:ordem_desconto' ordem.pk %}">{% csrf_token %}{% include 'includes/form_fields.html' with form=desconto_form %}<button class="btn btn-warning" type="submit">Aplicar desconto</button></form>
+        {% endif %}
+    </div></div></div>
+</div>
+{% endblock %}
