@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Ordens de serviço | Nova Mecânica{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Ordens de serviço</h1>
+<div class="table-responsive bg-white rounded border"><table class="table table-hover mb-0">
+    <caption class="px-3">Ordens de serviço cadastradas</caption>
+    <thead><tr><th scope="col">OS</th><th scope="col">Cliente</th><th scope="col">Veículo</th><th scope="col">Status</th><th scope="col">Total</th></tr></thead>
+    <tbody>{% for ordem in ordens %}<tr><td><a href="{% url 'core:ordem_detalhe' ordem.pk %}">#{{ ordem.pk }}</a></td><td>{{ ordem.cliente.nome }}</td><td>{{ ordem.veiculo.placa }}</td><td>{{ ordem.get_status_display }}</td><td>R$ {{ ordem.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">Nenhuma ordem de serviço cadastrada.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Clientes | Nova Mecânica{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><h1 class="h3">Clientes</h1>{% if perms.core.add_cliente %}<a class="btn btn-warning" href="{% url 'core:cliente_criar' %}">Cadastrar cliente</a>{% endif %}</div>
+<div class="table-responsive bg-white rounded border"><table class="table table-hover mb-0">
+    <caption class="px-3">Clientes cadastrados na oficina</caption>
+    <thead><tr><th scope="col">Nome</th><th scope="col">CPF</th><th scope="col">Telefone</th><th scope="col">E-mail</th></tr></thead>
+    <tbody>{% for cliente in clientes %}<tr><td>{{ cliente.nome }}</td><td>{{ cliente.cpf }}</td><td>{{ cliente.telefone }}</td><td>{{ cliente.email|default:'—' }}</td></tr>{% empty %}<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}
