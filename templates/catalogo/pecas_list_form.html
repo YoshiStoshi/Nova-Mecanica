@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Catálogo de Peças | Nova Mecânica{% endblock %}
+{% block page_title %}Catálogo de Peças & Gestão de Estoque{% endblock %}
+
+{% block content %}
+<!-- Estatísticas de Estoque -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="bi bi-boxes"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Total de Peças</span>
+                <h3 class="mb-0 fw-bold">{{ total_pecas }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Estoque Baixo (<= 3 un)</span>
+                <h3 class="mb-0 fw-bold text-warning">{{ total_baixas }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon danger">
+                <i class="bi bi-x-circle"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Estoque Zerado</span>
+                <h3 class="mb-0 fw-bold text-danger">{{ total_zeradas }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Card Principal com Tabela e Busca -->
+<div class="card card-modern">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="h5 mb-1 fw-bold text-dark">Peças Cadastradas</h2>
+            <p class="text-muted small mb-0">Controle do catálogo e movimentações de estoque para Dono/Gerente.</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <!-- Barra de Busca -->
+            <form method="get" class="d-flex gap-2">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="busca" class="form-control" placeholder="Buscar por descrição..." value="{{ termo_busca }}">
+                    <button class="btn btn-outline-secondary" type="submit" title="Buscar">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    {% if termo_busca %}
+                        <a href="{% url 'core:pecas' %}" class="btn btn-outline-danger" title="Limpar busca">
+                            <i class="bi bi-x"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Botão Cadastrar Peça (H06) -->
+            <button type="button" class="btn btn-primary-nova btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalNovaPeca">
+                <i class="bi bi-plus-circle"></i>
+                <span>Nova Peça</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-modern table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 80px;">Cód.</th>
+                    <th scope="col">Descrição</th>
+                    <th scope="col" class="text-end" style="width: 160px;">Preço Unitário</th>
+                    <th scope="col" class="text-center" style="width: 140px;">Estoque Atual</th>
+                    <th scope="col" class="text-end" style="width: 200px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for peca in pecas %}
+                <tr>
+                    <td class="font-mono text-muted small">#{{ peca.id|stringformat:"03d" }}</td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ peca.descricao }}</div>
+                        {% if peca.nome and peca.nome != peca.descricao %}
+                            <div class="text-muted small">{{ peca.nome }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-mono fw-semibold text-primary">
+                        R$ {{ peca.preco|floatformat:2 }}
+                    </td>
+                    <td class="text-center">
+                        {% if peca.estoque == 0 %}
+                            <span class="badge badge-estoque-zerado px-2 py-1">0 un (Esgotado)</span>
+                        {% elif peca.estoque <= 3 %}
+                            <span class="badge badge-estoque-alerta px-2 py-1">{{ peca.estoque }} un (Baixo)</span>
+                        {% else %}
+                            <span class="badge badge-estoque-ok px-2 py-1">{{ peca.estoque }} un</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <!-- Botão Ajustar Estoque (H08) -->
+                            <button type="button" class="btn btn-outline-secondary" title="Ajustar Saldo de Estoque"
+                                    onclick="abrirModalAjuste({{ peca.id }}, '{{ peca.descricao|escapejs }}', {{ peca.estoque }})">
+                                <i class="bi bi-arrow-left-right me-1"></i>Ajustar
+                            </button>
+
+                            <!-- Botão Excluir Peça (H09) -->
+                            <button type="button" class="btn btn-outline-danger" title="Excluir Peça do Catálogo"
+                                    onclick="abrirModalExcluir({{ peca.id }}, '{{ peca.descricao|escapejs }}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                        Nenhuma peça encontrada no catálogo.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==============================================================================
+     MODAL DE CADASTRO DE PEÇA (H06)
+     ============================================================================== -->
+<div class="modal fade" id="modalNovaPeca" tabindex="-1" aria-labelledby="modalNovaPecaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-modern border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="modalNovaPecaLabel">
+                    <i class="bi bi-plus-circle-fill text-primary me-2"></i>Cadastrar Nova Peça
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="post" action="{% url 'core:pecas' %}" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="cadastrar_peca" value="1">
+                <div class="modal-body p-4">
+                    {% include 'includes/form_fields.html' with form=form %}
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary-nova">Salvar Peça</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================================================
+     MODAL DE AJUSTE DE ESTOQUE (H08)
+     ============================================================================== -->
+<div class="modal fade" id="modalAjusteEstoque" tabindex="-1" aria-labelledby="modalAjusteEstoqueLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-modern border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="modalAjusteEstoqueLabel">
+                    <i class="bi bi-sliders text-warning me-2"></i>Ajustar Saldo de Estoque
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formAjusteEstoque" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-3">
+                        <div class="small text-muted">Peça selecionada:</div>
+                        <div id="ajusteNomePeca" class="fw-bold text-dark fs-6"></div>
+                        <div class="small text-muted mt-1">Saldo Atual: <strong id="ajusteSaldoAtual" class="font-mono text-primary fs-6"></strong> unidades</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ajusteOperacao" class="form-label fw-semibold small">Tipo de Movimentação</label>
+                        <select name="operacao" id="ajusteOperacao" class="form-select" onchange="calcularPrevisaoEstoque()">
+                            <option value="adicionar">Adicionar ao estoque (+)</option>
+                            <option value="remover">Subtrair do estoque (-)</option>
+                            <option value="definir">Definir novo saldo fixo (=)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ajusteQuantidade" class="form-label fw-semibold small">Quantidade para Ajuste</label>
+                        <input type="number" name="quantidade" id="ajusteQuantidade" class="form-control" min="0" value="1" required oninput="calcularPrevisaoEstoque()">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ajusteMotivo" class="form-label fw-semibold small">Motivo / Justificativa (Opcional)</label>
+                        <input type="text" name="motivo" id="ajusteMotivo" class="form-control" placeholder="Ex: Compra de fornecedor, avaria, contagem física">
+                    </div>
+
+                    <!-- Previsão do novo saldo em tempo real -->
+                    <div id="alertaPrevisao" class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-0">
+                        <span>Novo saldo previsto:</span>
+                        <span id="valorPrevisao" class="font-mono fw-bold fs-6">0 un</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnSalvarAjuste" class="btn btn-primary-nova">Confirmar Ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================================================
+     MODAL DE EXCLUSÃO PROTEGIDA DE PEÇA (H09)
+     ============================================================================== -->
+<div class="modal fade" id="modalExcluirPeca" tabindex="-1" aria-labelledby="modalExcluirPecaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-modern border-0">
+            <div class="modal-header border-bottom bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="modalExcluirPecaLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formExcluirPeca" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-dark">Tem certeza de que deseja remover a peça <strong id="excluirNomePeca"></strong> do catálogo?</p>
+                    <div class="alert alert-warning py-2 px-3 small border-0">
+                        <i class="bi bi-shield-lock-fill me-1"></i>
+                        <strong>Aviso de proteção:</strong> Se houver qualquer histórico de Ordens de Serviço vinculadas a esta peça, a exclusão será automaticamente bloqueada pelo sistema.
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let saldoAtualPeca = 0;
+
+    function abrirModalAjuste(pecaId, descricao, saldo) {
+        saldoAtualPeca = parseInt(saldo);
+        document.getElementById('ajusteNomePeca').textContent = descricao;
+        document.getElementById('ajusteSaldoAtual').textContent = saldoAtualPeca;
+        document.getElementById('ajusteQuantidade').value = 1;
+        document.getElementById('ajusteOperacao').value = 'adicionar';
+        document.getElementById('formAjusteEstoque').action = `/catalogo/pecas/${pecaId}/ajustar-estoque/`;
+        calcularPrevisaoEstoque();
+
+        const modal = new bootstrap.Modal(document.getElementById('modalAjusteEstoque'));
+        modal.show();
+    }
+
+    function calcularPrevisaoEstoque() {
+        const operacao = document.getElementById('ajusteOperacao').value;
+        const quantidade = parseInt(document.getElementById('ajusteQuantidade').value) || 0;
+        let novoSaldo = saldoAtualPeca;
+
+        if (operacao === 'adicionar') {
+            novoSaldo = saldoAtualPeca + quantidade;
+        } else if (operacao === 'remover') {
+            novoSaldo = saldoAtualPeca - quantidade;
+        } else if (operacao === 'definir') {
+            novoSaldo = quantidade;
+        }
+
+        const alertaPrevisao = document.getElementById('alertaPrevisao');
+        const valorPrevisao = document.getElementById('valorPrevisao');
+        const btnSalvar = document.getElementById('btnSalvarAjuste');
+
+        valorPrevisao.textContent = `${novoSaldo} un`;
+
+        if (novoSaldo < 0) {
+            alertaPrevisao.className = 'alert alert-danger py-2 px-3 small d-flex justify-content-between align-items-center mb-0';
+            valorPrevisao.textContent = `${novoSaldo} un (Inválido! Saldo negativo não permitido)`;
+            btnSalvar.disabled = true;
+        } else {
+            alertaPrevisao.className = 'alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-0';
+            btnSalvar.disabled = false;
+        }
+    }
+
+    function abrirModalExcluir(pecaId, descricao) {
+        document.getElementById('excluirNomePeca').textContent = `"${descricao}"`;
+        document.getElementById('formExcluirPeca').action = `/catalogo/pecas/${pecaId}/excluir/`;
+        const modal = new bootstrap.Modal(document.getElementById('modalExcluirPeca'));
+        modal.show();
+    }
+
+    // Se houve erro na submissão do form de nova peça, reabre o modal automaticamente
+    {% if form.errors %}
+        document.addEventListener("DOMContentLoaded", function() {
+            const modal = new bootstrap.Modal(document.getElementById('modalNovaPeca'));
+            modal.show();
+        });
+    {% endif %}
+</script>
+{% endblock %}

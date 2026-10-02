@@ -8,17 +8,17 @@ from django.test import TestCase, SimpleTestCase, Client
 from unittest import skipUnless
 from django.urls import reverse
 
-from .calculos import calcular_totais
-from . import models
-from .validators import normalizar_cpf, normalizar_placa
+from core.calculos import calcular_totais
+from core import models
+from core.validators import normalizar_cpf, normalizar_placa
 
 MODELOS_DISPONIVEIS = all(hasattr(models, nome) for nome in (
     'Cliente', 'Veiculo', 'Peca', 'Servico', 'OrdemServico', 'ItemPeca', 'ItemServico',
 ))
 if MODELOS_DISPONIVEIS:
-    from .forms import ClienteForm, VeiculoForm
-    from .models import Cliente, Veiculo, Peca, Servico, OrdemServico, ItemPeca, ItemServico
-    from .services import incluir_item, remover_item, alterar_desconto
+    from core.forms import ClienteForm, VeiculoForm
+    from core.models import Cliente, Veiculo, Peca, Servico, OrdemServico, ItemPeca, ItemServico
+    from core.services import incluir_item, remover_item, alterar_desconto
 
 
 class CalculoTests(SimpleTestCase):
@@ -51,7 +51,7 @@ class CalculoTests(SimpleTestCase):
 
 
 @skipUnless(MODELOS_DISPONIVEIS, 'Integração pendente: modelos e migrações dos colegas ainda não entregues.')
-class ControllersJoaoTests(TestCase):
+class ControllersCadastrosEOrdensTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Perfis apenas como fixtures deste teste, sem configurar grupos na aplicação.
@@ -271,7 +271,7 @@ class ControllersJoaoTests(TestCase):
         self.assertTrue(self.gerente.has_perm('core.add_peca'))
 
 
-class ValidadoresJoaoTests(SimpleTestCase):
+class ValidadoresTests(SimpleTestCase):
     def test_cpf_normalizado(self):
         self.assertEqual(normalizar_cpf('529.982.247-25'), '52998224725')
         self.assertEqual(normalizar_cpf('52998224725'), '52998224725')

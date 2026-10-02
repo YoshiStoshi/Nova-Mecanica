@@ -1,36 +1,246 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}OS #{{ ordem.pk }} | Nova Mecânica{% endblock %}
+{% block page_title %}Ordem de Serviço #{{ ordem.pk }}{% endblock %}
+
 {% block content %}
-{% if erro_operacao %}<div class="alert alert-danger" role="alert">{{ erro_operacao }}</div>{% endif %}
-<a href="{% url 'core:ordens' %}">Voltar às ordens</a>
-<h1 class="h3 mt-3">OS #{{ ordem.pk }} <span class="badge text-bg-secondary">{{ ordem.get_status_display }}</span></h1>
-<p>{{ ordem.cliente.nome }} · {{ ordem.veiculo }}</p>
-{% if ordem.status != 'pendente' %}<div class="alert alert-info">Os itens e o desconto só podem ser alterados enquanto a OS estiver pendente.</div>{% endif %}
-<div class="row g-4">
-    <div class="col-lg-8">
-        <h2 class="h5">Peças</h2>
-        <div class="table-responsive"><table class="table bg-white">
-            <thead><tr><th scope="col">Peça</th><th scope="col">Qtd.</th><th scope="col">Preço unitário</th><th scope="col">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
-            <tbody>{% for item in itens_peca %}<tr><td>{{ item.peca.descricao }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario_historico|floatformat:2 }}</td><td>R$ {{ item.subtotal|floatformat:2 }}</td><td>{% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itempeca %}<form method="post" action="{% url 'core:ordem_peca_remover' ordem.pk item.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remover {{ item.peca.descricao }}">Remover</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">Nenhuma peça incluída.</td></tr>{% endfor %}</tbody>
-        </table></div>
-        {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itempeca %}
-        <form method="post" action="{% url 'core:ordem_peca_adicionar' ordem.pk %}" class="card card-body mb-4">{% csrf_token %}{% include 'includes/form_fields.html' with form=peca_form %}<button type="submit" class="btn btn-outline-dark align-self-start">Incluir peça</button></form>
-        {% endif %}
-        <h2 class="h5">Serviços</h2>
-        <div class="table-responsive"><table class="table bg-white">
-            <thead><tr><th scope="col">Serviço</th><th scope="col">Qtd.</th><th scope="col">Preço unitário</th><th scope="col">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
-            <tbody>{% for item in itens_servico %}<tr><td>{{ item.servico.descricao }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario_historico|floatformat:2 }}</td><td>R$ {{ item.subtotal|floatformat:2 }}</td><td>{% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itemservico %}<form method="post" action="{% url 'core:ordem_servico_remover' ordem.pk item.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Remover {{ item.servico.descricao }}">Remover</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">Nenhum serviço incluído.</td></tr>{% endfor %}</tbody>
-        </table></div>
-        {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itemservico %}
-        <form method="post" action="{% url 'core:ordem_servico_adicionar' ordem.pk %}" class="card card-body">{% csrf_token %}{% include 'includes/form_fields.html' with form=servico_form %}<button type="submit" class="btn btn-outline-dark align-self-start">Incluir serviço</button></form>
-        {% endif %}
+{% if erro_operacao %}
+    <div class="alert alert-danger shadow-sm border-0 d-flex align-items-center gap-2 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>{{ erro_operacao }}</div>
     </div>
-    <div class="col-lg-4"><div class="card"><div class="card-body">
-        <h2 class="h5">Resumo</h2>
-        <dl><dt>Subtotal</dt><dd>R$ {{ ordem.subtotal|floatformat:2 }}</dd><dt>Desconto ({{ ordem.desconto_percentual|floatformat:2 }}%)</dt><dd>R$ {{ ordem.valor_desconto|floatformat:2 }}</dd><dt>Total</dt><dd class="fs-4 fw-bold">R$ {{ ordem.total|floatformat:2 }}</dd></dl>
-        {% if ordem.status == 'pendente' and perms.core.change_ordemservico %}
-        <form method="post" action="{% url 'core:ordem_desconto' ordem.pk %}">{% csrf_token %}{% include 'includes/form_fields.html' with form=desconto_form %}<button class="btn btn-warning" type="submit">Aplicar desconto</button></form>
-        {% endif %}
-    </div></div></div>
+{% endif %}
+
+<!-- Cabeçalho da Ordem de Serviço -->
+<div class="card card-modern mb-4">
+    <div class="card-modern-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <a href="{% url 'core:ordens' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar às ordens
+                </a>
+                <h1 class="h3 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                    <span>OS #{{ ordem.pk }}</span>
+                    {% if ordem.status == 'pendente' %}
+                        <span class="badge bg-warning text-dark fs-6">Pendente</span>
+                    {% elif ordem.status == 'em_execucao' %}
+                        <span class="badge bg-primary fs-6">Em Execução</span>
+                    {% elif ordem.status == 'concluida' %}
+                        <span class="badge bg-success fs-6">Concluída</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary fs-6">{{ ordem.get_status_display }}</span>
+                    {% endif %}
+                </h1>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-person me-1"></i><strong>{{ ordem.cliente.nome }}</strong> (CPF: {{ ordem.cliente.cpf }})
+                    &nbsp;·&nbsp;
+                    <span class="plate-badge me-1">{{ ordem.veiculo.placa }}</span>
+                    <span>{{ ordem.veiculo.marca }} {{ ordem.veiculo.modelo }} ({{ ordem.veiculo.ano }})</span>
+                </p>
+                {% if ordem.observacoes %}
+                    <div class="mt-2 text-muted small bg-light p-2 rounded border">
+                        <i class="bi bi-info-circle me-1"></i><strong>Observações:</strong> {{ ordem.observacoes }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-column align-items-end gap-2">
+                <div>
+                    <span class="text-muted small d-block text-end">Data de Abertura</span>
+                    <span class="font-mono text-dark fw-semibold">{{ ordem.criado_em|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% if perms.core.change_ordemservico %}
+                <form method="post" action="{% url 'core:ordem_alterar_status' ordem.pk %}" class="d-flex gap-1 align-items-center mt-1">
+                    {% csrf_token %}
+                    <select name="novo_status" class="form-select form-select-sm" style="width: auto;">
+                        <option value="pendente" {% if ordem.status == 'pendente' %}selected{% endif %}>Pendente</option>
+                        <option value="em_execucao" {% if ordem.status == 'em_execucao' %}selected{% endif %}>Em Execução</option>
+                        <option value="concluida" {% if ordem.status == 'concluida' %}selected{% endif %}>Concluída</option>
+                        <option value="cancelada" {% if ordem.status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Atualizar</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if ordem.status != 'pendente' %}
+    <div class="alert alert-info shadow-sm border-0 d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-lock-fill fs-5"></i>
+        <div>Os itens e o desconto só podem ser alterados enquanto a OS estiver pendente.</div>
+    </div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Coluna Esquerda: Peças e Serviços (8 cols) -->
+    <div class="col-lg-8">
+        <!-- Peças -->
+        <div class="card card-modern mb-4">
+            <div class="card-modern-header d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0 fw-bold text-dark">
+                    <i class="bi bi-boxes text-primary me-2"></i>Peças Utilizadas
+                </h2>
+                <span class="badge bg-light text-secondary border font-mono">{{ itens_peca|length }} item(ns)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern table-hover align-middle mb-0 bg-white">
+                    <thead>
+                        <tr>
+                            <th scope="col">Peça</th>
+                            <th scope="col" class="text-center" style="width: 90px;">Qtd.</th>
+                            <th scope="col" class="text-end" style="width: 140px;">Preço unitário</th>
+                            <th scope="col" class="text-end" style="width: 140px;">Subtotal</th>
+                            <th scope="col" class="text-center" style="width: 80px;"><span class="visually-hidden">Ações</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in itens_peca %}
+                        <tr>
+                            <td class="fw-semibold text-dark">{{ item.peca.descricao }}</td>
+                            <td class="text-center font-mono">{{ item.quantidade }}</td>
+                            <td class="text-end font-mono text-muted">R$ {{ item.preco_unitario_historico|floatformat:2 }}</td>
+                            <td class="text-end font-mono fw-semibold text-primary">R$ {{ item.subtotal|floatformat:2 }}</td>
+                            <td class="text-center">
+                                {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itempeca %}
+                                <form method="post" action="{% url 'core:ordem_peca_remover' ordem.pk item.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm p-1 border-0" aria-label="Remover {{ item.peca.descricao }}" title="Remover">
+                                        <i class="bi bi-trash fs-6"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-muted small">Nenhuma peça incluída.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itempeca %}
+            <div class="card-footer bg-light p-3 border-top">
+                <h3 class="h6 fw-bold mb-2">Incluir Nova Peça na OS</h3>
+                <form method="post" action="{% url 'core:ordem_peca_adicionar' ordem.pk %}" class="card card-body border-0 shadow-sm p-3">
+                    {% csrf_token %}
+                    {% include 'includes/form_fields.html' with form=peca_form %}
+                    <button type="submit" class="btn btn-outline-dark btn-sm align-self-start mt-2">
+                        <i class="bi bi-plus-lg me-1"></i>Incluir peça
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Serviços -->
+        <div class="card card-modern mb-4">
+            <div class="card-modern-header d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0 fw-bold text-dark">
+                    <i class="bi bi-wrench-adjustable-circle text-primary me-2"></i>Serviços Prestados
+                </h2>
+                <span class="badge bg-light text-secondary border font-mono">{{ itens_servico|length }} item(ns)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern table-hover align-middle mb-0 bg-white">
+                    <thead>
+                        <tr>
+                            <th scope="col">Serviço</th>
+                            <th scope="col" class="text-center" style="width: 90px;">Qtd.</th>
+                            <th scope="col" class="text-end" style="width: 140px;">Preço unitário</th>
+                            <th scope="col" class="text-end" style="width: 140px;">Subtotal</th>
+                            <th scope="col" class="text-center" style="width: 80px;"><span class="visually-hidden">Ações</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in itens_servico %}
+                        <tr>
+                            <td class="fw-semibold text-dark">{{ item.servico.descricao }}</td>
+                            <td class="text-center font-mono">{{ item.quantidade }}</td>
+                            <td class="text-end font-mono text-muted">R$ {{ item.preco_unitario_historico|floatformat:2 }}</td>
+                            <td class="text-end font-mono fw-semibold text-primary">R$ {{ item.subtotal|floatformat:2 }}</td>
+                            <td class="text-center">
+                                {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.delete_itemservico %}
+                                <form method="post" action="{% url 'core:ordem_servico_remover' ordem.pk item.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm p-1 border-0" aria-label="Remover {{ item.servico.descricao }}" title="Remover">
+                                        <i class="bi bi-trash fs-6"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-muted small">Nenhum serviço incluído.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if ordem.status == 'pendente' and perms.core.change_ordemservico and perms.core.add_itemservico %}
+            <div class="card-footer bg-light p-3 border-top">
+                <h3 class="h6 fw-bold mb-2">Incluir Novo Serviço na OS</h3>
+                <form method="post" action="{% url 'core:ordem_servico_adicionar' ordem.pk %}" class="card card-body border-0 shadow-sm p-3">
+                    {% csrf_token %}
+                    {% include 'includes/form_fields.html' with form=servico_form %}
+                    <button type="submit" class="btn btn-outline-dark btn-sm align-self-start mt-2">
+                        <i class="bi bi-plus-lg me-1"></i>Incluir serviço
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Coluna Direita: Resumo Financeiro & Desconto (4 cols) -->
+    <div class="col-lg-4">
+        <div class="card card-modern sticky-top" style="top: 80px;">
+            <div class="card-modern-header" style="background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%); color: #ffffff;">
+                <h2 class="h6 mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-receipt text-warning"></i>
+                    <span>Resumo Financeiro</span>
+                </h2>
+            </div>
+            <div class="card-modern-body p-4">
+                <dl class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <dt class="text-muted fw-normal">Subtotal Bruto:</dt>
+                        <dd class="font-mono fw-semibold text-dark mb-0">R$ {{ ordem.subtotal|floatformat:2 }}</dd>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <dt class="text-muted fw-normal">Desconto ({{ ordem.desconto_percentual|floatformat:2 }}%):</dt>
+                        <dd class="font-mono text-danger mb-0">- R$ {{ ordem.valor_desconto|floatformat:2 }}</dd>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <dt class="fw-bold text-dark fs-5">Total:</dt>
+                        <dd class="font-mono fs-4 fw-bold text-primary mb-0">R$ {{ ordem.total|floatformat:2 }}</dd>
+                    </div>
+                </dl>
+
+                {% if ordem.status == 'pendente' and perms.core.change_ordemservico %}
+                <div class="mt-4 pt-3 border-top">
+                    <h3 class="h6 fw-semibold text-dark mb-2">Alterar Desconto (%)</h3>
+                    <form method="post" action="{% url 'core:ordem_desconto' ordem.pk %}">
+                        {% csrf_token %}
+                        {% include 'includes/form_fields.html' with form=desconto_form %}
+                        <button class="btn btn-warning w-100 mt-2 fw-semibold" type="submit">
+                            <i class="bi bi-percent me-1"></i>Aplicar desconto
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

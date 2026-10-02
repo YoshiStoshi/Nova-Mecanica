@@ -1,10 +1,86 @@
 {% extends 'base.html' %}
-{% block title %}Ordens de serviço | Nova Mecânica{% endblock %}
+{% load static %}
+
+{% block title %}Ordens de Serviço | Nova Mecânica{% endblock %}
+{% block page_title %}Ordens de Serviço{% endblock %}
+
 {% block content %}
-<h1 class="h3 mb-3">Ordens de serviço</h1>
-<div class="table-responsive bg-white rounded border"><table class="table table-hover mb-0">
-    <caption class="px-3">Ordens de serviço cadastradas</caption>
-    <thead><tr><th scope="col">OS</th><th scope="col">Cliente</th><th scope="col">Veículo</th><th scope="col">Status</th><th scope="col">Total</th></tr></thead>
-    <tbody>{% for ordem in ordens %}<tr><td><a href="{% url 'core:ordem_detalhe' ordem.pk %}">#{{ ordem.pk }}</a></td><td>{{ ordem.cliente.nome }}</td><td>{{ ordem.veiculo.placa }}</td><td>{{ ordem.get_status_display }}</td><td>R$ {{ ordem.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">Nenhuma ordem de serviço cadastrada.</td></tr>{% endfor %}</tbody>
-</table></div>
+<div class="card card-modern">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="h5 mb-1 fw-bold text-dark">Ordens de Serviço</h2>
+            <p class="text-muted small mb-0">Controle completo de serviços, diagnósticos e faturamento.</p>
+        </div>
+
+        {% if perms.core.add_ordemservico or request.user.is_superuser %}
+        <div>
+            <a href="{% url 'core:orcamento_novo' %}" class="btn btn-primary-nova btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-file-earmark-plus"></i>
+                <span>Novo Orçamento</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-modern table-hover align-middle mb-0">
+            <caption class="visually-hidden">Ordens de serviço cadastradas na oficina</caption>
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 80px;">OS</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Veículo</th>
+                    <th scope="col" class="text-center" style="width: 140px;">Status</th>
+                    <th scope="col" class="text-end" style="width: 160px;">Total</th>
+                    <th scope="col" class="text-end" style="width: 100px;">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ordem in ordens %}
+                <tr>
+                    <td class="font-mono fw-bold text-dark">
+                        <a href="{% url 'core:ordem_detalhe' ordem.pk %}" class="text-decoration-none">#{{ ordem.pk }}</a>
+                    </td>
+                    <td class="fw-semibold text-dark">
+                        {{ ordem.cliente.nome }}
+                    </td>
+                    <td>
+                        <span class="plate-badge me-2">{{ ordem.veiculo.placa }}</span>
+                        <span class="text-muted small">{{ ordem.veiculo.marca }} {{ ordem.veiculo.modelo }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if ordem.status == 'pendente' %}
+                            <span class="badge bg-warning text-dark px-2 py-1">Pendente</span>
+                        {% elif ordem.status == 'em_execucao' %}
+                            <span class="badge bg-primary px-2 py-1">Em Execução</span>
+                        {% elif ordem.status == 'concluida' %}
+                            <span class="badge bg-success px-2 py-1">Concluída</span>
+                        {% elif ordem.status == 'cancelada' %}
+                            <span class="badge bg-danger px-2 py-1">Cancelada</span>
+                        {% else %}
+                            <span class="badge bg-secondary px-2 py-1">{{ ordem.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-mono fw-bold text-primary">
+                        R$ {{ ordem.total|floatformat:2 }}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'core:ordem_detalhe' ordem.pk %}" class="btn btn-outline-secondary btn-sm" title="Ver Detalhes">
+                            <span>Ver</span>
+                            <i class="bi bi-chevron-right ms-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i class="bi bi-card-checklist fs-2 d-block mb-2 text-secondary"></i>
+                        Nenhuma ordem de serviço cadastrada no momento.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

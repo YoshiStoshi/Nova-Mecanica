@@ -1,19 +1,45 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}{{ titulo }} | Nova Mecânica{% endblock %}
+{% block page_title %}{{ titulo }}{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-7">
-        <h1 class="h3 mb-3">{{ titulo }}</h1>
-        <div class="card shadow-sm"><div class="card-body p-4">
-            <p class="text-muted small">Os campos marcados com * são obrigatórios.</p>
-            {% if form.errors %}<div class="alert alert-danger" role="alert">Confira os campos indicados. Os demais dados foram mantidos.</div>{% endif %}
-            <form method="post">
-                {% csrf_token %}
-                {% include 'includes/form_fields.html' %}
-                <button class="btn btn-warning" type="submit">Salvar</button>
-                <a class="btn btn-outline-secondary" href="{{ voltar_url }}">Voltar</a>
-            </form>
-        </div></div>
+    <div class="col-lg-7 col-xl-6">
+        <div class="card card-modern shadow-md">
+            <div class="card-modern-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0 fw-bold text-dark">{{ titulo }}</h2>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ voltar_url }}">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </a>
+            </div>
+
+            <div class="card-modern-body p-4">
+                <p class="text-muted small">Os campos marcados com <span class="text-danger">*</span> são de preenchimento obrigatório.</p>
+
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                            <div>Confira os campos indicados. Os demais dados foram mantidos.</div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include 'includes/form_fields.html' %}
+
+                    <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
+                        <a class="btn btn-outline-secondary" href="{{ voltar_url }}">Cancelar</a>
+                        <button class="btn btn-primary-nova px-4" type="submit">
+                            <i class="bi bi-check-lg me-1"></i>Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
