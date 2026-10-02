@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Entrar no Sistema | Nova Mecânica{% endblock %}
+{% block page_title %}Autenticação de Usuário{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center py-4 my-auto">
+    <div class="col-11 col-sm-9 col-md-7 col-lg-5 col-xl-4">
+        <!-- Card de Login Moderno -->
+        <div class="card card-modern shadow-lg border-0 overflow-hidden">
+            <!-- Cabeçalho Estilizado em Azul-Marinho -->
+            <div class="p-4 text-center text-white" style="background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%);">
+                <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-10 rounded-circle p-3 mb-2" style="width: 64px; height: 64px;">
+                    <i class="bi bi-tools text-warning fs-2"></i>
+                </div>
+                <h2 class="h4 fw-bold mb-1">Nova Mecânica</h2>
+                <p class="small text-white-50 mb-0">Gestão e Controle de Oficina</p>
+            </div>
+
+            <!-- Corpo do Formulário -->
+            <div class="card-body p-4">
+                <div class="mb-4 text-center">
+                    <h3 class="h5 fw-semibold text-dark mb-1">Acesse sua conta</h3>
+                    <p class="text-muted small">Informe seu usuário ou e-mail cadastrado e sua senha.</p>
+                </div>
+
+                {% if form.non_field_errors %}
+                    <!-- Erro Amigável de Credenciais Inválidas (CT-004) -->
+                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3 border-0 small" role="alert">
+                        <i class="bi bi-exclamation-octagon-fill fs-5 flex-shrink-0 text-danger"></i>
+                        <div>{{ form.non_field_errors }}</div>
+                    </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'core:login' %}" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next }}">
+
+                    <!-- Campo Usuário / Identificador -->
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label small fw-semibold text-dark">
+                            Usuário / E-mail <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback d-block small mt-1">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Campo Senha -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label for="{{ form.password.id_for_label }}" class="form-label small fw-semibold text-dark mb-1">
+                                Senha de Acesso <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            {{ form.password }}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block small mt-1">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Botão de Login -->
+                    <button type="submit" class="btn btn-primary-nova w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span>Entrar no Sistema</span>
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-3 border-top text-center text-muted small">
+                    <p class="mb-0">
+                        <i class="bi bi-shield-check text-success me-1"></i>
+                        Acesso restrito a colaboradores autorizados da oficina.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

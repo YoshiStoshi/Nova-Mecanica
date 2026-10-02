@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Catálogo de Serviços | Nova Mecânica{% endblock %}
+{% block page_title %}Catálogo de Serviços{% endblock %}
+
+{% block content %}
+<div class="card card-modern">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="h5 mb-1 fw-bold text-dark">Serviços Oferecidos</h2>
+            <p class="text-muted small mb-0">Tabela de mão de obra e serviços padrão cadastrados na oficina.</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <!-- Barra de Busca -->
+            <form method="get" class="d-flex gap-2">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="busca" class="form-control" placeholder="Buscar serviço..." value="{{ termo_busca }}">
+                    <button class="btn btn-outline-secondary" type="submit" title="Buscar">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    {% if termo_busca %}
+                        <a href="{% url 'core:servicos' %}" class="btn btn-outline-danger" title="Limpar busca">
+                            <i class="bi bi-x"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Botão Cadastrar Serviço (H07) -->
+            <button type="button" class="btn btn-primary-nova btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalNovoServico">
+                <i class="bi bi-plus-circle"></i>
+                <span>Novo Serviço</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-modern table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 80px;">Cód.</th>
+                    <th scope="col">Descrição do Serviço</th>
+                    <th scope="col" class="text-end" style="width: 180px;">Valor (R$)</th>
+                    <th scope="col" class="text-end" style="width: 140px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for servico in servicos %}
+                <tr>
+                    <td class="font-mono text-muted small">#{{ servico.id|stringformat:"03d" }}</td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ servico.descricao }}</div>
+                        {% if servico.nome and servico.nome != servico.descricao %}
+                            <div class="text-muted small">{{ servico.nome }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-end font-mono fw-semibold text-primary">
+                        R$ {{ servico.preco|floatformat:2 }}
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm" title="Excluir Serviço"
+                                onclick="abrirModalExcluirServico({{ servico.id }}, '{{ servico.descricao|escapejs }}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                        Nenhum serviço cadastrado no catálogo.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==============================================================================
+     MODAL DE CADASTRO DE SERVIÇO (H07)
+     ============================================================================== -->
+<div class="modal fade" id="modalNovoServico" tabindex="-1" aria-labelledby="modalNovoServicoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-modern border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="modalNovoServicoLabel">
+                    <i class="bi bi-plus-circle-fill text-primary me-2"></i>Cadastrar Novo Serviço
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form method="post" action="{% url 'core:servicos' %}" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="cadastrar_servico" value="1">
+                <div class="modal-body p-4">
+                    {% include 'includes/form_fields.html' with form=form %}
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary-nova">Salvar Serviço</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==============================================================================
+     MODAL DE EXCLUSÃO DE SERVIÇO
+     ============================================================================== -->
+<div class="modal fade" id="modalExcluirServico" tabindex="-1" aria-labelledby="modalExcluirServicoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-modern border-0">
+            <div class="modal-header border-bottom bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="modalExcluirServicoLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formExcluirServico" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-dark">Tem certeza de que deseja remover o serviço <strong id="excluirNomeServico"></strong> do catálogo?</p>
+                    <div class="alert alert-warning py-2 px-3 small border-0">
+                        <i class="bi bi-shield-lock-fill me-1"></i>
+                        Se houver ordens de serviço vinculadas a este serviço, a exclusão será bloqueada.
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function abrirModalExcluirServico(servicoId, descricao) {
+        document.getElementById('excluirNomeServico').textContent = `"${descricao}"`;
+        document.getElementById('formExcluirServico').action = `/catalogo/servicos/${servicoId}/excluir/`;
+        const modal = new bootstrap.Modal(document.getElementById('modalExcluirServico'));
+        modal.show();
+    }
+
+    {% if form.errors %}
+        document.addEventListener("DOMContentLoaded", function() {
+            const modal = new bootstrap.Modal(document.getElementById('modalNovoServico'));
+            modal.show();
+        });
+    {% endif %}
+</script>
+{% endblock %}

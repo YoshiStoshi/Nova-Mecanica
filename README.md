@@ -123,7 +123,13 @@ CREATE DATABASE "NovaMecDB";
 python manage.py migrate
 ```
 
-7. Crie um usuário administrador para acessar o Django Admin:
+7. Configure os perfis e permissões da equipe (Dono/Gerente, Atendente, Mecânico):
+
+```bash
+python manage.py setup_perfis
+```
+
+8. Crie um usuário administrador para acessar o Django Admin:
 
 ```bash
 python manage.py createsuperuser
@@ -131,36 +137,64 @@ python manage.py createsuperuser
 
 Siga as instruções exibidas no terminal para definir usuário, e-mail e senha.
 
-8. Inicie o servidor de desenvolvimento:
+9. Inicie o servidor de desenvolvimento:
 
 ```bash
 python manage.py runserver
 ```
 
-9. Acesse a aplicação:
+10. Acesse a aplicação:
 
 * **Aplicação:** `http://127.0.0.1:8000/`
 * **Painel administrativo:** `http://127.0.0.1:8000/admin/`
+
+### Publicação e Deploy (Render)
+
+O projeto está configurado para deploy no Render ou serviços similares via `Procfile` e `WhiteNoise`:
+
+* **Build Command:**
+  ```bash
+  pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_perfis
+  ```
+* **Start Command:**
+  ```bash
+  gunicorn setup.wsgi:application
+  ```
+* **Variáveis de Ambiente:** Configure as variáveis descritas no `.env.example` no painel do Render (incluindo `SECRET_KEY`, `ALLOWED_HOSTS`, `DEBUG=False` e conexão com o banco PostgreSQL).
+
 
 ## Estrutura do repositório
 
 ```text
 Nova Mecanica/
 ├── core/                — App principal da aplicação
+│   ├── management/      — Comandos de gerenciamento (ex: setup_perfis)
+│   ├── tests/           — Suíte modular de testes automatizados
 │   ├── models.py        — Modelos e estruturas de dados
-│   ├── views.py         — Regras de controle das páginas
-│   └── templates/       — Templates da aplicação
+│   ├── views.py         — Regras de negócio e controladores
+│   ├── forms.py         — Formulários e validações com Bootstrap
+│   ├── calculos.py      — Motor de cálculo decimal e arredondamentos
+│   ├── services.py      — Serviços transacionais de OS e itens
+│   └── urls.py          — Rotas da aplicação
+│
+├── templates/           — Templates Django modulares
+│   ├── catalogo/        — Telas de Peças, Estoque e Serviços
+│   ├── orcamentos/      — Montagem dinâmica de orçamentos
+│   ├── usuarios/        — Autenticação e login
+│   ├── core/            — Home/Dashboard, Clientes, Veículos e OS
+│   └── base.html        — Layout mestre com Sidebar e Header sticky
+│
+├── static/              — Arquivos estáticos
+│   ├── css/custom.css   — Design system e paleta azul-marinho
+│   └── js/orcamento.js  — Lógica de orçamento em tempo real
 │
 ├── setup/               — Configurações globais do Django
-│   ├── settings.py      — Configurações do projeto
-│   └── urls.py          — Rotas principais
+│   ├── settings.py      — Configurações do projeto e WhiteNoise
+│   └── urls.py          — Rotas raiz do projeto
 │
-├── .venv/               — Ambiente virtual Python (não versionado)
-├── .env                 — Variáveis de ambiente locais (não versionado)
-├── .env.example         — Modelo das variáveis de ambiente
-├── .gitignore           — Arquivos ignorados pelo Git
+├── Procfile             — Inicialização em produção (Gunicorn)
+├── requirements.txt     — Dependências do projeto (UTF-8)
 ├── manage.py            — Utilitário de gerenciamento do Django
-├── requirements.txt     — Dependências do projeto
 └── README.md            — Documentação do projeto
 ```
 

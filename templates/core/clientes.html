@@ -1,10 +1,54 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Clientes | Nova Mecânica{% endblock %}
+{% block page_title %}Clientes Cadastrados{% endblock %}
+
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><h1 class="h3">Clientes</h1>{% if perms.core.add_cliente %}<a class="btn btn-warning" href="{% url 'core:cliente_criar' %}">Cadastrar cliente</a>{% endif %}</div>
-<div class="table-responsive bg-white rounded border"><table class="table table-hover mb-0">
-    <caption class="px-3">Clientes cadastrados na oficina</caption>
-    <thead><tr><th scope="col">Nome</th><th scope="col">CPF</th><th scope="col">Telefone</th><th scope="col">E-mail</th></tr></thead>
-    <tbody>{% for cliente in clientes %}<tr><td>{{ cliente.nome }}</td><td>{{ cliente.cpf }}</td><td>{{ cliente.telefone }}</td><td>{{ cliente.email|default:'—' }}</td></tr>{% empty %}<tr><td colspan="4">Nenhum cliente cadastrado.</td></tr>{% endfor %}</tbody>
-</table></div>
+<div class="card card-modern">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="h5 mb-1 fw-bold text-dark">Clientes</h2>
+            <p class="text-muted small mb-0">Base de clientes e dados para contato da oficina mecânica.</p>
+        </div>
+
+        {% if perms.core.add_cliente %}
+        <a class="btn btn-primary-nova btn-sm d-flex align-items-center gap-1" href="{% url 'core:cliente_criar' %}">
+            <i class="bi bi-person-plus"></i>
+            <span>Cadastrar cliente</span>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-modern table-hover align-middle mb-0">
+            <caption class="visually-hidden">Clientes cadastrados na oficina</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Nome</th>
+                    <th scope="col" style="width: 170px;">CPF</th>
+                    <th scope="col" style="width: 170px;">Telefone</th>
+                    <th scope="col">E-mail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr>
+                    <td class="fw-semibold text-dark">{{ cliente.nome }}</td>
+                    <td class="font-mono text-muted">{{ cliente.cpf }}</td>
+                    <td class="font-mono">{{ cliente.telefone }}</td>
+                    <td>{{ cliente.email|default:'—' }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        <i class="bi bi-people fs-2 d-block mb-2 text-secondary"></i>
+                        Nenhum cliente cadastrado.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

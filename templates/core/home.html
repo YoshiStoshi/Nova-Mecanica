@@ -1,64 +1,203 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Início | {{ sistema }}{% endblock %}
+{% block title %}Dashboard | Nova Mecânica{% endblock %}
+{% block page_title %}Painel de Operações{% endblock %}
 
 {% block content %}
-<div class="row align-items-center justify-content-center py-5">
-    <div class="col-lg-8 text-center">
-        <div class="p-5 bg-white rounded-4 shadow-sm border">
-            <div class="display-4 text-warning mb-3">
+<!-- Linha Superior de Métricas (KPIs) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">OS Pendentes</span>
+                <h3 class="mb-0 fw-bold">{{ ordens_pendentes }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon primary">
                 <i class="bi bi-gear-wide-connected"></i>
             </div>
-            <h1 class="fw-bold mb-3">Bem-vindo ao Sistema {{ sistema }}</h1>
-            <p class="lead text-muted mb-4">
-                Estrutura Django e banco de dados PostgreSQL prontos para o início do desenvolvimento!
-            </p>
-            
-            <hr class="my-4">
-
-            <div class="row g-3 text-start mt-2">
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title fw-bold text-primary">
-                                <i class="bi bi-database-check me-2"></i>PostgreSQL 14
-                            </h6>
-                            <p class="card-text small text-muted">
-                                Conectado ao banco <code>NovaMecDB</code> com migrações aplicadas.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title fw-bold text-success">
-                                <i class="bi bi-layout-text-window-reverse me-2"></i>Templates Base
-                            </h6>
-                            <p class="card-text small text-muted">
-                                Layout padrão compartilhado com Bootstrap 5 configurado para a equipe.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title fw-bold text-dark">
-                                <i class="bi bi-diagram-3 me-2"></i>App Core
-                            </h6>
-                            <p class="card-text small text-muted">
-                                Módulo pronto para receber os modelos (Clientes, Veículos, OS).
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            <div>
+                <span class="text-muted small fw-medium">Em Execução</span>
+                <h3 class="mb-0 fw-bold text-primary">{{ ordens_em_execucao }}</h3>
             </div>
+        </div>
+    </div>
 
-            <div class="mt-4 pt-2">
-                <a href="/admin/" class="btn btn-warning px-4 py-2 fw-semibold me-2" target="_blank">
-                    <i class="bi bi-speedometer2 me-1"></i>Acessar Painel Admin
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Concluídas</span>
+                <h3 class="mb-0 fw-bold text-success">{{ ordens_concluidas }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon {% if pecas_baixo_estoque > 0 %}danger{% else %}success{% endif %}">
+                <i class="bi bi-boxes"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Estoque em Alerta</span>
+                <h3 class="mb-0 fw-bold {% if pecas_baixo_estoque > 0 %}text-danger{% else %}text-muted{% endif %}">
+                    {{ pecas_baixo_estoque }}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="card card-modern mb-4">
+    <div class="card-modern-body p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
+                <span class="fw-bold text-dark">Ações Rápidas do Sistema:</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                {% if perms.core.add_ordemservico or request.user.is_superuser %}
+                <a href="{% url 'core:orcamento_novo' %}" class="btn btn-primary-nova btn-sm d-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-plus"></i>
+                    <span>Montar Orçamento</span>
                 </a>
+                {% endif %}
+
+                {% if perms.core.add_cliente or request.user.is_superuser %}
+                <a href="{% url 'core:cliente_criar' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Novo Cliente</span>
+                </a>
+                {% endif %}
+
+                {% if perms.core.add_veiculo or request.user.is_superuser %}
+                <a href="{% url 'core:veiculo_criar' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                    <i class="bi bi-car-front"></i>
+                    <span>Novo Veículo</span>
+                </a>
+                {% endif %}
+
+                {% if perms.core.add_peca or request.user.is_superuser %}
+                <a href="{% url 'core:pecas' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                    <i class="bi bi-boxes"></i>
+                    <span>Catálogo de Peças</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grid com Últimas Ordens e Alertas de Estoque -->
+<div class="row g-4">
+    <!-- Últimas Ordens de Serviço -->
+    <div class="col-lg-8">
+        <div class="card card-modern h-100">
+            <div class="card-modern-header d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0 fw-bold text-dark">
+                    <i class="bi bi-card-checklist text-primary me-2"></i>Últimas Ordens de Serviço
+                </h2>
+                <a href="{% url 'core:ordens' %}" class="small text-decoration-none fw-semibold">Ver todas &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 70px;">OS</th>
+                            <th scope="col">Cliente / Veículo</th>
+                            <th scope="col" class="text-center">Status</th>
+                            <th scope="col" class="text-end">Total</th>
+                            <th scope="col" class="text-end" style="width: 70px;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ordem in ultimas_ordens %}
+                        <tr>
+                            <td class="font-mono fw-bold text-dark">#{{ ordem.id }}</td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ ordem.cliente.nome }}</div>
+                                <div class="small text-muted font-mono">{{ ordem.veiculo.placa }} · {{ ordem.veiculo.marca }} {{ ordem.veiculo.modelo }}</div>
+                            </td>
+                            <td class="text-center">
+                                {% if ordem.status == 'pendente' %}
+                                    <span class="badge bg-warning text-dark px-2 py-1">Pendente</span>
+                                {% elif ordem.status == 'em_execucao' %}
+                                    <span class="badge bg-primary px-2 py-1">Em Execução</span>
+                                {% elif ordem.status == 'concluida' %}
+                                    <span class="badge bg-success px-2 py-1">Concluída</span>
+                                {% else %}
+                                    <span class="badge bg-secondary px-2 py-1">{{ ordem.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end font-mono fw-semibold text-primary">
+                                R$ {{ ordem.total|floatformat:2 }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'core:ordem_detalhe' ordem.pk %}" class="btn btn-outline-secondary btn-sm p-1" title="Visualizar Detalhes">
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted small">
+                                Nenhuma ordem de serviço cadastrada ainda.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de Estoque Baixo -->
+    <div class="col-lg-4">
+        <div class="card card-modern h-100">
+            <div class="card-modern-header d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0 fw-bold text-dark">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Atenção ao Estoque
+                </h2>
+                {% if perms.core.add_peca or request.user.is_superuser %}
+                <a href="{% url 'core:pecas' %}" class="small text-decoration-none fw-semibold">Gerenciar &rarr;</a>
+                {% endif %}
+            </div>
+            <div class="card-modern-body p-0">
+                {% if pecas_alerta %}
+                    <ul class="list-group list-group-flush">
+                        {% for peca in pecas_alerta %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                            <div>
+                                <div class="fw-semibold text-dark small">{{ peca.descricao }}</div>
+                                <div class="font-mono text-muted small">Preço: R$ {{ peca.preco|floatformat:2 }}</div>
+                            </div>
+                            <div>
+                                {% if peca.estoque == 0 %}
+                                    <span class="badge badge-estoque-zerado">0 un</span>
+                                {% else %}
+                                    <span class="badge badge-estoque-alerta">{{ peca.estoque }} un</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="p-4 text-center text-muted small">
+                        <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-2"></i>
+                        Todas as peças estão com níveis de estoque adequados.
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Novo Orçamento | Nova Mecânica{% endblock %}
+{% block page_title %}Montagem Dinâmica de Orçamento{% endblock %}
+
+{% block content %}
+<form id="formOrcamento" method="post" action="{% url 'core:orcamento_converter' %}" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <!-- Coluna Esquerda: Dados do Cliente, Veículo e Itens Dinâmicos (8 colunas) -->
+        <div class="col-lg-8">
+            <!-- 1. Seleção de Cliente e Veículo -->
+            <div class="card card-modern mb-4">
+                <div class="card-modern-header d-flex justify-content-between align-items-center">
+                    <h2 class="h6 mb-0 fw-bold text-dark">
+                        <i class="bi bi-person-badge text-primary me-2"></i>1. Cliente e Veículo
+                    </h2>
+                    <span class="badge bg-light text-secondary border">Passo Obrigatório</span>
+                </div>
+                <div class="card-modern-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="selectCliente" class="form-label fw-semibold small">Cliente <span
+                                    class="text-danger">*</span></label>
+                            <select id="selectCliente" name="cliente" class="form-select" required>
+                                <option value="">-- Selecione o cliente --</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}">{{ cliente.nome }} (CPF: {{ cliente.cpf }})</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small">
+                                Não encontrou o cliente? <a href="{% url 'core:cliente_criar' %}" target="_blank"
+                                    class="fw-semibold">Cadastrar novo</a>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="selectVeiculo" class="form-label fw-semibold small">Veículo Associado <span
+                                    class="text-danger">*</span></label>
+                            <select id="selectVeiculo" name="veiculo" class="form-select" disabled required>
+                                <option value="">-- Selecione um cliente primeiro --</option>
+                            </select>
+                            <div id="veiculoHelpText" class="form-text small text-muted">
+                                O filtro de veículos é atualizado automaticamente.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Seção Dinâmica de Peças (H10, H13) -->
+            <div class="card card-modern mb-4">
+                <div class="card-modern-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h6 mb-0 fw-bold text-dark">
+                            <i class="bi bi-boxes text-primary me-2"></i>2. Peças & Componentes
+                        </h2>
+                        <span class="text-muted small">Adicione as peças que serão utilizadas no conserto</span>
+                    </div>
+                    <button type="button" id="btnAddPeca"
+                        class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Adicionar Peça</span>
+                    </button>
+                </div>
+                <div class="card-modern-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-modern align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Peça do Catálogo</th>
+                                    <th scope="col" class="text-center" style="width: 110px;">Qtd.</th>
+                                    <th scope="col" class="text-end" style="width: 130px;">Unitário</th>
+                                    <th scope="col" class="text-end" style="width: 140px;">Subtotal</th>
+                                    <th scope="col" class="text-center" style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaPecasCorpo">
+                                <!-- Linhas inseridas dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pecasVaziaMsg" class="p-4 text-center text-muted small" style="display: none;">
+                        <i class="bi bi-box-seam fs-3 d-block text-secondary mb-1"></i>
+                        Nenhuma peça adicionada ao orçamento até o momento.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Seção Dinâmica de Serviços (H10, H14) -->
+            <div class="card card-modern mb-4">
+                <div class="card-modern-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h6 mb-0 fw-bold text-dark">
+                            <i class="bi bi-wrench-adjustable-circle text-primary me-2"></i>3. Mão de Obra & Serviços
+                        </h2>
+                        <span class="text-muted small">Selecione os procedimentos e serviços a serem executados</span>
+                    </div>
+                    <button type="button" id="btnAddServico"
+                        class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Adicionar Serviço</span>
+                    </button>
+                </div>
+                <div class="card-modern-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-modern align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Serviço Cadastrado</th>
+                                    <th scope="col" class="text-center" style="width: 110px;">Qtd.</th>
+                                    <th scope="col" class="text-end" style="width: 130px;">Unitário</th>
+                                    <th scope="col" class="text-end" style="width: 140px;">Subtotal</th>
+                                    <th scope="col" class="text-center" style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaServicosCorpo">
+                                <!-- Linhas inseridas dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="servicosVaziaMsg" class="p-4 text-center text-muted small" style="display: none;">
+                        <i class="bi bi-gear fs-3 d-block text-secondary mb-1"></i>
+                        Nenhum serviço adicionado ao orçamento.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Observações / Diagnóstico Inicial -->
+            <div class="card card-modern">
+                <div class="card-modern-header">
+                    <h2 class="h6 mb-0 fw-bold text-dark">
+                        <i class="bi bi-chat-left-text text-primary me-2"></i>4. Observações & Diagnóstico
+                    </h2>
+                </div>
+                <div class="card-modern-body">
+                    <textarea name="observacoes" class="form-control" rows="3"
+                        placeholder="Informações adicionais do cliente, reclamações, diagnóstico prévio ou orientações para a equipe mecânica..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Resumo Financeiro em Tempo Real (4 colunas, sticky) (H11, H12) -->
+        <div class="col-lg-4">
+            <div class="card card-modern sticky-top" style="top: 80px; z-index: 1010;">
+                <div class="card-modern-header"
+                    style="background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%); color: #ffffff;">
+                    <h2 class="h6 mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                        <i class="bi bi-calculator text-warning"></i>
+                        <span>Resumo Financeiro</span>
+                    </h2>
+                    <span class="badge bg-warning text-dark small mt-1">Tempo Real</span>
+                </div>
+
+                <div class="card-modern-body p-4">
+                    <!-- Detalhamento de Subtotais -->
+                    <div class="d-flex justify-content-between align-items-center mb-2 text-muted small">
+                        <span>Total em Peças:</span>
+                        <span id="subtotalPecas" class="font-mono fw-semibold text-dark">R$ 0,00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 text-muted small">
+                        <span>Total em Serviços:</span>
+                        <span id="subtotalServicos" class="font-mono fw-semibold text-dark">R$ 0,00</span>
+                    </div>
+
+                    <hr class="my-2 border-secondary border-opacity-25">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-semibold text-dark">Subtotal Bruto:</span>
+                        <span id="subtotalGeral" class="font-mono fw-bold fs-6 text-dark">R$ 0,00</span>
+                    </div>
+
+                    <!-- Configuração do Desconto (0% a 100%) -->
+                    <div class="bg-light p-3 rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="inputDesconto" class="form-label small fw-bold text-dark mb-0">Desconto
+                                Aplicado</label>
+                            <div class="input-group input-group-sm" style="width: 100px;">
+                                <input type="number" id="inputDesconto" name="desconto_percentual"
+                                    class="form-control text-end font-mono" min="0" max="100" step="0.5" value="0">
+                                <span class="input-group-text bg-white">%</span>
+                            </div>
+                        </div>
+
+                        <!-- Slider interativo de desconto -->
+                        <input type="range" class="form-range" id="rangeDesconto" min="0" max="100" step="1" value="0">
+
+                        <div id="erroDesconto" class="text-danger small mt-1" style="display: none;">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>O desconto deve estar entre 0% e 100%.
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-2 small text-danger">
+                            <span>Valor descontado:</span>
+                            <span id="valorDesconto" class="font-mono fw-semibold">- R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Final em Destaque -->
+                    <div class="p-3 rounded-3 text-center mb-4"
+                        style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe;">
+                        <span class="text-uppercase small fw-bold text-secondary letter-spacing-1 d-block mb-1">Total do
+                            Orçamento</span>
+                        <div id="totalFinal" class="font-mono fw-bold fs-2 text-primary">R$ 0,00</div>
+                    </div>
+
+                    <!-- Botão de Destaque: Converter em Ordem de Serviço (H12) -->
+                    <button type="submit" id="btnConverterOS"
+                        class="btn btn-accent-nova w-100 py-3 shadow-sm d-flex align-items-center justify-content-center gap-2 fs-6">
+                        <i class="bi bi-file-earmark-check-fill fs-5"></i>
+                        <span>Converter em Ordem de Serviço</span>
+                    </button>
+
+                    <div class="text-center mt-3">
+                        <a href="{% url 'core:ordens' %}" class="text-muted small text-decoration-none">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar para Ordens de Serviço
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Serialização segura dos dados do Django para o JavaScript -->
+<script>
+    window.ORCAMENTO_VEICULOS = {{ veiculos_json | safe }};
+    window.ORCAMENTO_PECAS = {{ pecas_json | safe }};
+    window.ORCAMENTO_SERVICOS = {{ servicos_json | safe }};
+</script>
+<script src="{% static 'js/orcamento.js' %}"></script>
+{% endblock %}
