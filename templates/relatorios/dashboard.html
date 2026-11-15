@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Gerencial & Relatórios | Nova Mecânica{% endblock %}
+{% block page_title %}Relatórios Gerenciais — Faturamento e Rankings (Dono/Gerente){% endblock %}
+
+{% block content %}
+<!-- Filtro por Período (H19, H20, H21) -->
+<div class="card card-modern mb-4">
+    <div class="card-modern-body p-3">
+        <form method="get" action="{% url 'core:relatorios_dashboard' %}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="inputInicio" class="form-label small fw-semibold text-dark mb-1">
+                    <i class="bi bi-calendar-event text-primary me-1"></i>Data Inicial (Conclusão da OS)
+                </label>
+                <input type="date" id="inputInicio" name="inicio" value="{{ inicio }}" class="form-control form-control-sm font-mono">
+            </div>
+            <div class="col-md-4">
+                <label for="inputFim" class="form-label small fw-semibold text-dark mb-1">
+                    <i class="bi bi-calendar-check text-primary me-1"></i>Data Final (Conclusão da OS)
+                </label>
+                <input type="date" id="inputFim" name="fim" value="{{ fim }}" class="form-control form-control-sm font-mono">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary-nova btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-2">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span>Aplicar Período</span>
+                </button>
+                {% if inicio or fim %}
+                <a href="{% url 'core:relatorios_dashboard' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center px-3">
+                    <i class="bi bi-x-lg me-1"></i>Limpar
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cards de Indicadores Consolidados (KPIs) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="bi bi-cash-coin"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Faturamento Líquido (Concluídas)</span>
+                <h3 class="mb-0 fw-bold font-mono text-success">R$ {{ faturamento_total_liquido|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">OSs Concluídas no Período</span>
+                <h3 class="mb-0 fw-bold font-mono text-dark">{{ total_os_concluidas }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon info">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Ticket Médio por OS</span>
+                <h3 class="mb-0 fw-bold font-mono text-primary">R$ {{ ticket_medio|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="bi bi-percent"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Total em Descontos Concedidos</span>
+                <h3 class="mb-0 fw-bold font-mono text-danger">R$ {{ total_descontos|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     1. FATURAMENTO MENSAL LÍQUIDO (H19) — GRÁFICO CHART.JS + TABELA ANALÍTICA
+     ========================================================================== -->
+<div class="card card-modern mb-4">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h2 class="h5 mb-0 fw-bold text-dark">
+                <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>1. Evolução do Faturamento Mensal (H19)
+            </h2>
+            <p class="text-muted small mb-0">
+                Considera estritamente Ordens de Serviço com status <strong>Concluída</strong>, agrupadas pelo mês de conclusão e computando o valor líquido com desconto (sem duplicação por N:N).
+            </p>
+        </div>
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+            Regra Contábil Ativa
+        </span>
+    </div>
+
+    <div class="card-modern-body p-4">
+        {% if faturamento_mensal %}
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-7">
+                <div style="height: 300px; position: relative;">
+                    <canvas id="chartFaturamentoMensal"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="table-responsive border rounded-3">
+                    <table class="table table-modern table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Mês/Ano</th>
+                                <th scope="col" class="text-center">OSs</th>
+                                <th scope="col" class="text-end">Descontos</th>
+                                <th scope="col" class="text-end">Líquido (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in faturamento_mensal %}
+                            <tr>
+                                <td class="font-mono fw-semibold text-dark">{{ item.mes_label }}</td>
+                                <td class="text-center font-mono">{{ item.quantidade_os }}</td>
+                                <td class="text-end font-mono text-danger small">- R$ {{ item.descontos|floatformat:2 }}</td>
+                                <td class="text-end font-mono fw-bold text-success">R$ {{ item.faturamento_liquido|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Empty State Amigável (CT-039) -->
+        <div class="text-center py-5 text-muted" id="emptyFaturamento">
+            <i class="bi bi-inbox fs-1 d-block text-secondary mb-2"></i>
+            <h3 class="h6 fw-bold text-dark mb-1">Nenhuma Ordem de Serviço concluída no período selecionado</h3>
+            <p class="small mb-0">Ordens com status Pendente, Aprovada, Em Execução ou Cancelada não compõem o faturamento mensal realizado.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==========================================================================
+     2. RANKING DE SERVIÇOS MAIS EXECUTADOS (H20) E PEÇAS MAIS VENDIDAS (H21)
+     ========================================================================== -->
+<div class="row g-4">
+    <!-- Ranking de Serviços Mais Executados (H20) -->
+    <div class="col-lg-6">
+        <div class="card card-modern h-100">
+            <div class="card-modern-header">
+                <h2 class="h6 mb-1 fw-bold text-dark">
+                    <i class="bi bi-wrench-adjustable-circle text-primary me-2"></i>2. Serviços Mais Executados (H20)
+                </h2>
+                <p class="text-muted small mb-0">
+                    Ordenação decrescente por quantidade executada em OSs concluídas (desempate alfabético por descrição).
+                </p>
+            </div>
+
+            <div class="card-modern-body p-4">
+                {% if ranking_servicos %}
+                <div class="mb-4" style="height: 220px; position: relative;">
+                    <canvas id="chartRankingServicos"></canvas>
+                </div>
+
+                <div class="table-responsive border rounded-3">
+                    <table class="table table-modern table-hover align-middle mb-0" id="tabelaRankingServicos">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width: 55px;">Pos.</th>
+                                <th scope="col">Serviço</th>
+                                <th scope="col" class="text-center">Qtd. Executada</th>
+                                <th scope="col" class="text-end">Receita Bruta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for serv in ranking_servicos %}
+                            <tr>
+                                <td class="font-mono fw-bold text-muted">#{{ forloop.counter }}</td>
+                                <td class="fw-semibold text-dark">{{ serv.servico__descricao }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary font-mono px-2 py-1">{{ serv.quantidade_executada }}x</span>
+                                </td>
+                                <td class="text-end font-mono fw-semibold text-primary">
+                                    R$ {{ serv.receita_historica|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted" id="emptyRankingServicos">
+                    <i class="bi bi-tools fs-2 d-block text-secondary mb-2"></i>
+                    <h3 class="h6 fw-bold text-dark mb-1">Sem serviços executados no período</h3>
+                    <p class="small mb-0">Conclua Ordens de Serviço com mão de obra vinculada para visualizar o ranking.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking de Peças Mais Vendidas (H21) -->
+    <div class="col-lg-6">
+        <div class="card card-modern h-100">
+            <div class="card-modern-header">
+                <h2 class="h6 mb-1 fw-bold text-dark">
+                    <i class="bi bi-boxes text-primary me-2"></i>3. Peças Mais Vendidas / Utilizadas (H21)
+                </h2>
+                <p class="text-muted small mb-0">
+                    Ordenação decrescente por unidades vendidas em OSs concluídas (desempate alfabético por descrição).
+                </p>
+            </div>
+
+            <div class="card-modern-body p-4">
+                {% if ranking_pecas %}
+                <div class="mb-4" style="height: 220px; position: relative;">
+                    <canvas id="chartRankingPecas"></canvas>
+                </div>
+
+                <div class="table-responsive border rounded-3">
+                    <table class="table table-modern table-hover align-middle mb-0" id="tabelaRankingPecas">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width: 55px;">Pos.</th>
+                                <th scope="col">Peça do Catálogo</th>
+                                <th scope="col" class="text-center">Unid. Vendidas</th>
+                                <th scope="col" class="text-end">Receita Bruta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for peca in ranking_pecas %}
+                            <tr>
+                                <td class="font-mono fw-bold text-muted">#{{ forloop.counter }}</td>
+                                <td class="fw-semibold text-dark">{{ peca.peca__descricao }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark font-mono px-2 py-1">{{ peca.quantidade_vendida }} un</span>
+                                </td>
+                                <td class="text-end font-mono fw-semibold text-primary">
+                                    R$ {{ peca.receita_historica|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted" id="emptyRankingPecas">
+                    <i class="bi bi-box-seam fs-2 d-block text-secondary mb-2"></i>
+                    <h3 class="h6 fw-bold text-dark mb-1">Sem peças vendidas no período</h3>
+                    <p class="small mb-0">Conclua Ordens de Serviço com peças aplicadas para visualizar o ranking.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js 4.4 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    window.DASHBOARD_FATURAMENTO = {{ chart_faturamento_json|safe }};
+    window.DASHBOARD_SERVICOS = {{ chart_servicos_json|safe }};
+    window.DASHBOARD_PECAS = {{ chart_pecas_json|safe }};
+</script>
+<script src="{% static 'js/dashboard_charts.js' %}"></script>
+{% endblock %}
+

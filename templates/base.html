@@ -45,9 +45,19 @@
                 </a>
 
                 {% if request.user.is_authenticated %}
-                <!-- Catálogo (Apenas Dono/Gerente e Superuser) -->
+                <!-- Catálogo & Gestão (Apenas Dono/Gerente e Superuser) -->
                 {% if perms.core.add_peca or request.user.is_superuser %}
-                <div class="sidebar-heading">Catálogo</div>
+                <div class="sidebar-heading">Gestão & Catálogo</div>
+                <a href="{% url 'core:aprovar_os_painel' %}"
+                    class="sidebar-link {% if 'aprovar_os' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Aprovar OS</span>
+                </a>
+                <a href="{% url 'core:relatorios_dashboard' %}"
+                    class="sidebar-link {% if 'relatorios' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span>Relatórios</span>
+                </a>
                 <a href="{% url 'core:pecas' %}"
                     class="sidebar-link {% if 'pecas' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-boxes"></i>
@@ -78,6 +88,14 @@
                     <span>Ordens de Serviço</span>
                 </a>
 
+                {% if perms.core.view_veiculo or request.user.is_superuser %}
+                <a href="{% url 'core:historico_placa' %}"
+                    class="sidebar-link {% if 'historico_placa' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-search"></i>
+                    <span>Histórico por Placa</span>
+                </a>
+                {% endif %}
+
                 {% if perms.core.view_cliente or request.user.is_superuser %}
                 <a href="{% url 'core:clientes' %}"
                     class="sidebar-link {% if 'cliente' in request.resolver_match.url_name %}active{% endif %}">
@@ -88,11 +106,21 @@
 
                 {% if perms.core.view_veiculo or request.user.is_superuser %}
                 <a href="{% url 'core:veiculos' %}"
-                    class="sidebar-link {% if 'veiculo' in request.resolver_match.url_name %}active{% endif %}">
+                    class="sidebar-link {% if 'veiculo' in request.resolver_match.url_name and 'historico' not in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-car-front"></i>
                     <span>Veículos</span>
                 </a>
                 {% endif %}
+                {% endif %}
+
+                <!-- Oficina / Execução (Mecânico, Dono/Gerente, Superuser) -->
+                {% if not perms.core.view_cliente or perms.core.add_peca or request.user.is_superuser %}
+                <div class="sidebar-heading">Oficina</div>
+                <a href="{% url 'core:mecanico_os_dia' %}"
+                    class="sidebar-link {% if 'mecanico' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-wrench"></i>
+                    <span>Fila do Mecânico</span>
+                </a>
                 {% endif %}
 
                 <!-- Administração -->

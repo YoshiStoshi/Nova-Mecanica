@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fila do Mecânico | Nova Mecânica{% endblock %}
+{% block page_title %}Painel Operacional do Mecânico — OSs do Dia{% endblock %}
+
+{% block content %}
+<!-- Resumo da Fila Operacional (H16, H17, H18) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon info">
+                <i class="bi bi-clipboard2-check"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Aguardando Início (Aprovadas)</span>
+                <h3 class="mb-0 fw-bold font-mono text-info">{{ total_aprovadas }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="bi bi-gear-wide-connected"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Em Execução na Oficina</span>
+                <h3 class="mb-0 fw-bold font-mono text-primary">{{ total_em_execucao }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="bi bi-check2-all"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-medium">Concluídas Hoje</span>
+                <h3 class="mb-0 fw-bold font-mono text-success">{{ total_concluidas_hoje }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aviso de Regra de Negócio H17 -->
+<div class="alert alert-light border shadow-sm d-flex align-items-center gap-3 mb-4">
+    <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+    <div class="small text-muted">
+        <strong class="text-dark">Fluxo Técnico da Oficina:</strong> As peças listadas abaixo já tiveram baixa de estoque efetuada na aprovação pelo Dono/Gerente. Confirme a quantidade aplicada no veículo e, ao finalizar o serviço, clique em <strong>Concluir OS</strong>.
+    </div>
+</div>
+
+<!-- Cards das OSs Aprovadas / Em Execução (H16) -->
+<div class="d-flex flex-column gap-4 mb-5">
+    {% for os_item in ordens_fila %}
+    <div class="card card-modern border-start border-4 {% if os_item.status == 'em_execucao' %}border-primary{% else %}border-info{% endif %}">
+        <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="h5 mb-0 fw-bold font-mono text-dark">OS #{{ os_item.pk }}</span>
+                    <span class="plate-badge">{{ os_item.veiculo.placa }}</span>
+                    {% if os_item.status == 'aprovada' %}
+                        <span class="badge bg-info text-dark">Aprovada — Pronta para Iniciar</span>
+                    {% else %}
+                        <span class="badge bg-primary">Em Execução</span>
+                    {% endif %}
+                </div>
+                <div class="text-muted small mt-1">
+                    <strong>{{ os_item.veiculo.marca }} {{ os_item.veiculo.modelo }} ({{ os_item.veiculo.ano }})</strong>
+                    · Cliente: {{ os_item.cliente.nome }}
+                    {% if os_item.aprovada_em %}
+                        · Aprovada em {{ os_item.aprovada_em|date:"d/m/Y H:i" }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Botão para Concluir OS com Data/Hora (H18) -->
+            <form method="post" action="{% url 'core:mecanico_concluir_os' os_item.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success d-flex align-items-center gap-2 fw-semibold">
+                    <i class="bi bi-check2-circle"></i>
+                    <span>Concluir OS #{{ os_item.pk }}</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="card-modern-body p-4">
+            {% if os_item.observacoes %}
+            <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                <i class="bi bi-tools me-1"></i><strong>Orientação / Diagnóstico:</strong> {{ os_item.observacoes }}
+            </div>
+            {% endif %}
+
+            <div class="row g-4">
+                <!-- Coluna 1: Confirmação de Peças Utilizadas (H17) -->
+                <div class="col-lg-7">
+                    <h3 class="h6 fw-bold text-dark mb-2">
+                        <i class="bi bi-boxes text-primary me-1"></i>1. Confirmação de Peças Aplicadas (Sem Nova Baixa)
+                    </h3>
+                    <div class="table-responsive border rounded-3">
+                        <table class="table table-modern align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Peça Liberada</th>
+                                    <th scope="col" class="text-center">Aprovado</th>
+                                    <th scope="col" class="text-center">Aplicado</th>
+                                    <th scope="col" class="text-end" style="width: 210px;">Confirmar Uso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item_peca in os_item.itens_peca.all %}
+                                <tr>
+                                    <td class="fw-semibold text-dark">{{ item_peca.peca.descricao }}</td>
+                                    <td class="text-center font-mono">{{ item_peca.quantidade }} un</td>
+                                    <td class="text-center font-mono">
+                                        {% if item_peca.quantidade_utilizada == item_peca.quantidade %}
+                                            <span class="badge bg-success">{{ item_peca.quantidade_utilizada }}/{{ item_peca.quantidade }} un</span>
+                                        {% elif item_peca.quantidade_utilizada > 0 %}
+                                            <span class="badge bg-primary">{{ item_peca.quantidade_utilizada }}/{{ item_peca.quantidade }} un</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">0/{{ item_peca.quantidade }} un</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form method="post"
+                                              action="{% url 'core:mecanico_confirmar_peca' os_item.pk item_peca.pk %}"
+                                              class="d-inline-flex align-items-center gap-1">
+                                            {% csrf_token %}
+                                            <input type="number"
+                                                   name="quantidade_utilizada"
+                                                   class="form-control form-control-sm text-center font-mono"
+                                                   style="width: 70px;"
+                                                   min="0"
+                                                   max="{{ item_peca.quantidade }}"
+                                                   value="{{ item_peca.quantidade_utilizada|default:item_peca.quantidade }}"
+                                                   required>
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                Confirmar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3 text-muted small">
+                                        Nenhuma peça requisitada para esta OS.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Coluna 2: Checklist de Serviços a Executar -->
+                <div class="col-lg-5">
+                    <h3 class="h6 fw-bold text-dark mb-2">
+                        <i class="bi bi-wrench-adjustable-circle text-primary me-1"></i>2. Serviços de Mão de Obra
+                    </h3>
+                    <ul class="list-group border rounded-3">
+                        {% for item_serv in os_item.itens_servico.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-check2-square text-primary me-2"></i>
+                                <span class="fw-semibold text-dark">{{ item_serv.servico.descricao }}</span>
+                            </div>
+                            <span class="badge bg-light text-dark border font-mono">{{ item_serv.quantidade }}x</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted small text-center py-3">
+                            Nenhum serviço de mão de obra listado.
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card card-modern p-5 text-center text-muted">
+        <i class="bi bi-emoji-smile fs-1 text-success mb-2"></i>
+        <h3 class="h5 fw-bold text-dark">Fila de execução vazia no momento!</h3>
+        <p class="small mb-0">Não há Ordens de Serviço aprovadas ou em execução pendentes para a equipe mecânica.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Histórico Rápido das OSs Concluídas Hoje -->
+{% if ordens_concluidas_hoje %}
+<div class="card card-modern">
+    <div class="card-modern-header">
+        <h2 class="h6 mb-0 fw-bold text-dark">
+            <i class="bi bi-clock-history text-success me-2"></i>Ordens Concluídas Hoje
+        </h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-modern align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">OS</th>
+                    <th scope="col">Veículo</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col" class="text-end">Horário de Conclusão</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for os_conc in ordens_concluidas_hoje %}
+                <tr>
+                    <td class="font-mono fw-bold">#{{ os_conc.pk }}</td>
+                    <td><span class="plate-badge me-1">{{ os_conc.veiculo.placa }}</span> {{ os_conc.veiculo.marca }} {{ os_conc.veiculo.modelo }}</td>
+                    <td>{{ os_conc.cliente.nome }}</td>
+                    <td class="text-end font-mono text-success fw-semibold">{{ os_conc.data_conclusao|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

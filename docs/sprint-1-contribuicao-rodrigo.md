@@ -58,11 +58,10 @@ Nesta Sprint 1, atuei como responsável pela estruturação do ambiente base Dja
 
 ## 3. Evidências Técnicas (PRs e Commits)
 
-- `PR #01` — Setup inicial do projeto Django, WhiteNoise, `Procfile`, `runtime.txt` e `README.md`
-- `PR #03` — Estruturação de `base.html`, Sidebar por perfis e estilização com Bootstrap
-- `PR #05` — Tela de login (`login.html`), tratamento de mensagens e fluxo de logout via POST
-- `PR #08` — Telas de listagem e cadastro de catálogo de peças e serviços
-- `PR #11` — Ajustes de deploy em produção no Render e testes de assets estáticos
+- `Commit 43cf397` / `PR #01` (`ba80d40`) — Setup inicial do projeto Django, WhiteNoise, `Procfile`, `runtime.txt` e `README.md`
+- `Commit 4260c5c` — Estruturação de `templates/base.html`, Sidebar por perfis, `templates/core/home.html` e estilização com Bootstrap (`static/css/custom.css`)
+- `Commit 4803a4d` / `fbce7d2` — Padronização do `README.md` reproduzível (H25)
+- `Commit e36db42` / `PR #03` (`c7650c6`) — Tela de login (`templates/usuarios/login.html`), tratamento de mensagens, fluxo de logout via POST, telas de catálogo (`templates/catalogo/pecas_list_form.html` e `servicos_list_form.html`), comando `setup_perfis` e suíte de testes
 - `Suíte de Testes` — Testes automatizados em `core/tests/test_sprint1_sprint2.py` executados com 100% de sucesso
 
 ---

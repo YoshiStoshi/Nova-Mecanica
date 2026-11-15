@@ -1,15 +1,21 @@
+from datetime import date
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 import json
+import re
 
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.db import transaction, IntegrityError
+from django.db.models import Sum, Count, F, DecimalField
+from django.db.models.functions import TruncMonth, Coalesce
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from .calculos import calcular_totais
 from .forms import (
@@ -22,8 +28,35 @@ from .services import incluir_item, remover_item, alterar_desconto, recalcular_o
 
 
 # ==============================================================================
-# HELPERS DE PERMISSÃO E PERFIL
+# HELPERS E DECORATORS UNIFICADOS DE PERMISSÃO E PERFIL (H01, H02)
 # ==============================================================================
+
+PERFIL_DONO = 'Dono/Gerente'
+PERFIL_ATENDENTE = 'Atendente'
+PERFIL_MECANICO = 'Mecânico'
+PERFIS_ORCAMENTO = (PERFIL_DONO, PERFIL_ATENDENTE)
+
+
+def usuario_tem_perfil(user, *perfis):
+    """Retorna True para superusuário ou usuário pertencente a um dos grupos informados."""
+    return bool(
+        user.is_authenticated
+        and (user.is_superuser or user.groups.filter(name__in=perfis).exists())
+    )
+
+
+def exigir_perfil(*perfis):
+    """Decorator unificado para bloquear requisições diretas à URL quando o usuário não tem o perfil."""
+    def decorator(view):
+        @wraps(view)
+        @login_required
+        def wrapped(request, *args, **kwargs):
+            if not usuario_tem_perfil(request.user, *perfis):
+                raise PermissionDenied('Usuário sem permissão para esta operação.')
+            return view(request, *args, **kwargs)
+        return wrapped
+    return decorator
+
 
 def is_dono_ou_gerente(user):
     """Verifica se o usuário pertence ao perfil de Dono/Gerente ou é superusuário."""
@@ -31,7 +64,7 @@ def is_dono_ou_gerente(user):
         return False
     return (
         user.is_superuser or
-        user.groups.filter(name='Dono/Gerente').exists() or
+        user.groups.filter(name=PERFIL_DONO).exists() or
         user.has_perm('core.add_peca')
     )
 
@@ -42,8 +75,18 @@ def is_atendente_ou_superior(user):
         return False
     return (
         user.is_superuser or
-        user.groups.filter(name__in=['Dono/Gerente', 'Atendente']).exists() or
+        user.groups.filter(name__in=[PERFIL_DONO, PERFIL_ATENDENTE]).exists() or
         user.has_perm('core.view_cliente')
+    )
+
+
+def is_mecanico_ou_gerente(user):
+    """Verifica se o usuário pertence ao perfil Mecânico, Dono/Gerente ou é superusuário."""
+    if not user.is_authenticated:
+        return False
+    return (
+        user.is_superuser or
+        user.groups.filter(name__in=[PERFIL_MECANICO, PERFIL_DONO]).exists()
     )
 
 
@@ -606,8 +649,787 @@ def ordem_alterar_status(request, pk):
     novo_status = request.POST.get('novo_status')
     if novo_status in dict(OrdemServico.STATUS_CHOICES):
         ordem.status = novo_status
-        ordem.save(update_fields=['status', 'atualizado_em'])
+        update_fields = ['status', 'atualizado_em']
+        if novo_status == 'concluida' and not ordem.data_conclusao:
+            ordem.data_conclusao = timezone.now()
+            update_fields.append('data_conclusao')
+        ordem.save(update_fields=update_fields)
         messages.success(request, f'Status da OS #{ordem.pk} alterado para "{ordem.get_status_display()}".')
     else:
         messages.error(request, 'Status informado inválido.')
     return redirect('core:ordem_detalhe', pk=pk)
+
+
+# ==============================================================================
+# SPRINT 3 (E7): APROVAÇÃO ATÔMICA DE OS, HISTÓRICO POR PLACA E PAINEL MECÂNICO
+# ==============================================================================
+
+@login_required
+def aprovar_os_painel(request, pk=None):
+    """
+    Painel de Aprovação de Ordens de Serviço Pendentes (H15).
+    Exclusivo para Dono/Gerente. Compara a quantidade solicitada de cada peça
+    com o saldo atual em estoque e bloqueia visualmente a aprovação se faltar saldo.
+    """
+    if not is_dono_ou_gerente(request.user):
+        raise PermissionDenied('Apenas Dono/Gerente tem permissão para aprovar Ordens de Serviço.')
+
+    ordens_pendentes_qs = (
+        OrdemServico.objects.filter(status='pendente')
+        .select_related('cliente', 'veiculo')
+        .prefetch_related('itens_peca__peca', 'itens_servico__servico')
+        .order_by('-id')
+    )
+
+    ordens_analisadas = []
+    ordem_selecionada = None
+
+    for os_obj in ordens_pendentes_qs:
+        itens_peca_info = []
+        insuficientes = []
+        for item in os_obj.itens_peca.all():
+            estoque_atual = item.peca.estoque
+            suficiente = estoque_atual >= item.quantidade
+            faltante = max(0, item.quantidade - estoque_atual)
+            if not suficiente:
+                insuficientes.append({
+                    'descricao': item.peca.descricao,
+                    'solicitado': item.quantidade,
+                    'disponivel': estoque_atual,
+                    'faltante': faltante,
+                })
+            itens_peca_info.append({
+                'item': item,
+                'estoque_atual': estoque_atual,
+                'suficiente': suficiente,
+                'faltante': faltante,
+            })
+
+        apta = len(insuficientes) == 0
+        os_dict = {
+            'ordem': os_obj,
+            'itens_peca_info': itens_peca_info,
+            'itens_servico': list(os_obj.itens_servico.all()),
+            'insuficientes': insuficientes,
+            'apta_aprovacao': apta,
+        }
+        ordens_analisadas.append(os_dict)
+        if pk and os_obj.pk == pk:
+            ordem_selecionada = os_dict
+
+    if not ordem_selecionada and ordens_analisadas:
+        ordem_selecionada = ordens_analisadas[0]
+
+    context = {
+        'titulo': 'Aprovação de Ordens de Serviço',
+        'ordens_analisadas': ordens_analisadas,
+        'ordem_selecionada': ordem_selecionada,
+        'total_pendentes': len(ordens_analisadas),
+        'total_aptas': sum(1 for o in ordens_analisadas if o['apta_aprovacao']),
+        'total_bloqueadas': sum(1 for o in ordens_analisadas if not o['apta_aprovacao']),
+    }
+    return render(request, 'os/aprovar_os.html', context)
+
+
+@login_required
+@require_POST
+def aprovar_os_confirmar(request, pk):
+    """
+    Aprova a OS e executa a baixa atômica de estoque de todas as peças (H15).
+    Se faltar 1 unidade em qualquer peça, faz rollback completo e mantém a OS Pendente.
+    """
+    if not is_dono_ou_gerente(request.user):
+        raise PermissionDenied('Apenas Dono/Gerente pode aprovar Ordens de Serviço.')
+
+    with transaction.atomic():
+        ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+
+        if ordem.status != 'pendente':
+            messages.error(request, f'A OS #{ordem.pk} não está pendente (status atual: {ordem.get_status_display()}).')
+            return redirect('core:aprovar_os_painel')
+
+        if ordem.estoque_baixado:
+            messages.error(request, f'A OS #{ordem.pk} já teve baixa de estoque registrada anteriormente.')
+            return redirect('core:aprovar_os_painel')
+
+        itens = list(
+            ItemPeca.objects.select_related('peca')
+            .filter(ordem=ordem)
+            .order_by('peca_id')
+        )
+        peca_ids = [item.peca_id for item in itens]
+        pecas_bloqueadas = {
+            p.id: p for p in Peca.objects.select_for_update().filter(id__in=peca_ids)
+        }
+
+        insuficientes = []
+        for item in itens:
+            peca = pecas_bloqueadas[item.peca_id]
+            if peca.estoque < item.quantidade:
+                insuficientes.append(
+                    f'{peca.descricao} (solicitado: {item.quantidade} un, disponível: {peca.estoque} un)'
+                )
+
+        if insuficientes:
+            messages.error(
+                request,
+                f'Aprovação bloqueada para a OS #{ordem.pk} por estoque insuficiente: ' + '; '.join(insuficientes)
+            )
+            return redirect('core:aprovar_os_detalhe', pk=ordem.pk)
+
+        for item in itens:
+            peca = pecas_bloqueadas[item.peca_id]
+            peca.estoque -= item.quantidade
+            peca.save(update_fields=['estoque', 'atualizado_em'])
+
+        ordem.status = 'aprovada'
+        ordem.estoque_baixado = True
+        ordem.aprovada_em = timezone.now()
+        ordem.save(update_fields=['status', 'estoque_baixado', 'aprovada_em', 'atualizado_em'])
+
+    messages.success(
+        request,
+        f'OS #{ordem.pk} aprovada com sucesso! Baixa atômica de estoque realizada e enviada para a fila da oficina.'
+    )
+    return redirect('core:aprovar_os_painel')
+
+
+@login_required
+def historico_placa(request):
+    """
+    Consulta rápida (< 3s) de histórico completo de manutenção por placa do veículo (H05).
+    Distingue claramente:
+      (a) Placa não cadastrada no sistema (CT-012)
+      (b) Veículo cadastrado, porém sem histórico de manutenção/OSs (CT-059)
+      (c) Veículo com histórico de OSs e valores congelados (CT-011)
+    """
+    if not is_atendente_ou_superior(request.user):
+        raise PermissionDenied('Acesso restrito aos perfis Atendente e Dono/Gerente.')
+
+    placa_raw = request.GET.get('placa', '').strip()
+    placa_normalizada = re.sub(r'[\s-]+', '', placa_raw).upper()
+    busca_realizada = bool(placa_normalizada)
+
+    veiculo = None
+    ordens_historico = []
+    placa_nao_encontrada = False
+    sem_historico_manutencao = False
+    total_investido = Decimal('0.00')
+
+    if busca_realizada:
+        veiculo = (
+            Veiculo.objects.select_related('cliente')
+            .filter(placa__iexact=placa_normalizada)
+            .first()
+        )
+        if not veiculo:
+            placa_nao_encontrada = True
+        else:
+            ordens_historico = list(
+                OrdemServico.objects.filter(veiculo=veiculo)
+                .select_related('cliente', 'veiculo')
+                .prefetch_related('itens_peca__peca', 'itens_servico__servico')
+                .order_by('-criado_em', '-id')
+            )
+            if not ordens_historico:
+                sem_historico_manutencao = True
+            else:
+                total_investido = sum(
+                    (o.total for o in ordens_historico if o.status != 'cancelada'),
+                    Decimal('0.00')
+                )
+
+    placas_recentes = Veiculo.objects.select_related('cliente').order_by('-id')[:8]
+
+    context = {
+        'titulo': 'Histórico por Placa',
+        'termo_placa': placa_normalizada or placa_raw,
+        'busca_realizada': busca_realizada,
+        'veiculo': veiculo,
+        'ordens_historico': ordens_historico,
+        'placa_nao_encontrada': placa_nao_encontrada,
+        'sem_historico_manutencao': sem_historico_manutencao,
+        'total_investido': total_investido,
+        'placas_recentes': placas_recentes,
+    }
+    return render(request, 'veiculos/historico_placa.html', context)
+
+
+@login_required
+def mecanico_os_dia(request):
+    """
+    Painel Operacional do Mecânico com a fila de OSs aprovadas e em execução do dia (H16, H17, H18).
+    """
+    if not is_mecanico_ou_gerente(request.user):
+        raise PermissionDenied('Acesso restrito ao perfil Mecânico ou Dono/Gerente.')
+
+    ordens_fila = (
+        OrdemServico.objects.filter(status__in=['aprovada', 'em_execucao'])
+        .select_related('cliente', 'veiculo')
+        .prefetch_related('itens_peca__peca', 'itens_servico__servico')
+        .order_by('id')
+    )
+
+    hoje = timezone.localdate()
+    ordens_concluidas_hoje = (
+        OrdemServico.objects.filter(status='concluida', data_conclusao__date=hoje)
+        .select_related('cliente', 'veiculo')
+        .order_by('-data_conclusao')[:10]
+    )
+
+    context = {
+        'titulo': 'Painel do Mecânico — Fila do Dia',
+        'ordens_fila': ordens_fila,
+        'ordens_concluidas_hoje': ordens_concluidas_hoje,
+        'total_aprovadas': OrdemServico.objects.filter(status='aprovada').count(),
+        'total_em_execucao': OrdemServico.objects.filter(status='em_execucao').count(),
+        'total_concluidas_hoje': OrdemServico.objects.filter(status='concluida', data_conclusao__date=hoje).count(),
+    }
+    return render(request, 'mecanico/os_dia.html', context)
+
+
+@login_required
+@require_POST
+def mecanico_confirmar_peca(request, pk, item_id):
+    """
+    Confirmação de peças aplicadas pelo Mecânico (H17).
+    Registra a quantidade efetivamente utilizada até o limite aprovado na OS,
+    mudando o status para 'em_execucao' SEM realizar nova baixa no estoque.
+    """
+    if not is_mecanico_ou_gerente(request.user):
+        raise PermissionDenied('Apenas o Mecânico ou Dono/Gerente pode confirmar o uso de peças.')
+
+    with transaction.atomic():
+        ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+        if ordem.status not in {'aprovada', 'em_execucao'}:
+            messages.error(request, 'Apenas OSs aprovadas ou em execução permitem confirmar uso de peças.')
+            return redirect('core:mecanico_os_dia')
+
+        item = get_object_or_404(ItemPeca.objects.select_for_update(), pk=item_id, ordem=ordem)
+        try:
+            qtd_utilizada = int(request.POST.get('quantidade_utilizada', ''))
+        except (ValueError, TypeError):
+            messages.error(request, 'Informe uma quantidade inteira válida.')
+            return redirect('core:mecanico_os_dia')
+
+        if qtd_utilizada < 0 or qtd_utilizada > item.quantidade:
+            messages.error(
+                request,
+                f'A quantidade utilizada ({qtd_utilizada}) deve estar entre 0 e a quantidade aprovada ({item.quantidade}).'
+            )
+            return redirect('core:mecanico_os_dia')
+
+        # H17: Atualiza apenas quantidade_utilizada no ItemPeca; Peca.estoque NÃO é alterado!
+        item.quantidade_utilizada = qtd_utilizada
+        item.save(update_fields=['quantidade_utilizada'])
+
+        if ordem.status == 'aprovada':
+            ordem.status = 'em_execucao'
+            ordem.save(update_fields=['status', 'atualizado_em'])
+
+    messages.success(
+        request,
+        f'Uso confirmado na OS #{ordem.pk}: {item.quantidade_utilizada}/{item.quantidade} un. de "{item.peca.descricao}" (sem nova baixa de estoque).'
+    )
+    return redirect('core:mecanico_os_dia')
+
+
+@login_required
+@require_POST
+def mecanico_concluir_os(request, pk):
+    """
+    Encerra a execução técnica da Ordem de Serviço registrando data e hora de conclusão (H18).
+    """
+    if not is_mecanico_ou_gerente(request.user):
+        raise PermissionDenied('Apenas o Mecânico ou Dono/Gerente pode concluir uma Ordem de Serviço.')
+
+    with transaction.atomic():
+        ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+        if ordem.status not in {'aprovada', 'em_execucao'}:
+            messages.error(request, f'A OS #{ordem.pk} não pode ser concluída pois está com status "{ordem.get_status_display()}".')
+            return redirect('core:mecanico_os_dia')
+
+        ordem.status = 'concluida'
+        ordem.data_conclusao = timezone.now()
+        ordem.save(update_fields=['status', 'data_conclusao', 'atualizado_em'])
+
+    messages.success(
+        request,
+        f'Ordem de Serviço #{ordem.pk} ({ordem.veiculo.placa}) concluída com sucesso em {ordem.data_conclusao.strftime("%d/%m/%Y às %H:%M")}!'
+    )
+    return redirect('core:mecanico_os_dia')
+
+
+# ==============================================================================
+# SPRINT 4 (E8): DASHBOARD ANALÍTICO E RELATÓRIOS GERENCIAIS (H19, H20, H21)
+# ==============================================================================
+
+@login_required
+def relatorios_dashboard(request):
+    """
+    Dashboard Analítico exclusivo para Dono/Gerente (H19, H20, H21).
+    - H19: Faturamento mensal líquido (soma apenas OSs com status='concluida' sem duplicação N:N)
+    - H20: Ranking de Serviços mais executados (decrescente + desempate por descrição)
+    - H21: Ranking de Peças mais vendidas (decrescente + desempate por descrição)
+    """
+    if not is_dono_ou_gerente(request.user):
+        raise PermissionDenied('Relatórios gerenciais são exclusivos para o perfil Dono/Gerente.')
+
+    inicio_str = request.GET.get('inicio', '').strip()
+    fim_str = request.GET.get('fim', '').strip()
+
+    qs_concluidas = OrdemServico.objects.filter(status='concluida').annotate(
+        data_ref=Coalesce('data_conclusao', 'atualizado_em')
+    )
+
+    data_inicio = None
+    data_fim = None
+    try:
+        if inicio_str:
+            data_inicio = date.fromisoformat(inicio_str)
+            qs_concluidas = qs_concluidas.filter(data_ref__date__gte=data_inicio)
+        if fim_str:
+            data_fim = date.fromisoformat(fim_str)
+            qs_concluidas = qs_concluidas.filter(data_ref__date__lte=data_fim)
+    except ValueError:
+        messages.warning(request, 'Período informado em formato inválido. Exibindo todos os períodos.')
+        inicio_str = ''
+        fim_str = ''
+
+    # 1. Faturamento Mensal (H19) — Agregado diretamente em OrdemServico (sem JOIN N:N)
+    faturamento_por_mes_qs = (
+        qs_concluidas
+        .annotate(mes=TruncMonth('data_ref'))
+        .values('mes')
+        .annotate(
+            quantidade_os=Count('id', distinct=True),
+            subtotal_bruto=Coalesce(
+                Sum('subtotal'),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            ),
+            descontos=Coalesce(
+                Sum('valor_desconto'),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            ),
+            faturamento_liquido=Coalesce(
+                Sum('total'),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            ),
+        )
+        .order_by('mes')
+    )
+
+    faturamento_mensal_lista = []
+    for item in faturamento_por_mes_qs:
+        mes_dt = item['mes']
+        mes_label = mes_dt.strftime('%m/%Y') if mes_dt else 'Sem Data'
+        faturamento_mensal_lista.append({
+            'mes_iso': mes_dt.strftime('%Y-%m') if mes_dt else '',
+            'mes_label': mes_label,
+            'quantidade_os': item['quantidade_os'],
+            'subtotal_bruto': item['subtotal_bruto'],
+            'descontos': item['descontos'],
+            'faturamento_liquido': item['faturamento_liquido'],
+        })
+
+    # Indicadores consolidados do período filtrado
+    total_os_concluidas = sum(m['quantidade_os'] for m in faturamento_mensal_lista)
+    faturamento_total_liquido = sum((m['faturamento_liquido'] for m in faturamento_mensal_lista), Decimal('0.00'))
+    total_descontos = sum((m['descontos'] for m in faturamento_mensal_lista), Decimal('0.00'))
+    ticket_medio = (
+        (faturamento_total_liquido / Decimal(total_os_concluidas)).quantize(Decimal('0.01'))
+        if total_os_concluidas > 0 else Decimal('0.00')
+    )
+
+    concluidas_ids = qs_concluidas.values_list('id', flat=True)
+
+    # 2. Ranking de Serviços Mais Executados (H20) — Desempate alfabético por descrição
+    ranking_servicos = list(
+        ItemServico.objects.filter(ordem_id__in=concluidas_ids)
+        .values('servico_id', 'servico__descricao')
+        .annotate(
+            quantidade_executada=Sum('quantidade'),
+            total_ordens=Count('ordem_id', distinct=True),
+            receita_historica=Coalesce(
+                Sum(
+                    F('quantidade') * F('preco_unitario_historico'),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                ),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+        )
+        .order_by('-quantidade_executada', 'servico__descricao')
+    )
+
+    # 3. Ranking de Peças Mais Vendidas (H21) — Desempate alfabético por descrição
+    ranking_pecas = list(
+        ItemPeca.objects.filter(ordem_id__in=concluidas_ids)
+        .values('peca_id', 'peca__descricao')
+        .annotate(
+            quantidade_vendida=Sum('quantidade'),
+            total_ordens=Count('ordem_id', distinct=True),
+            receita_historica=Coalesce(
+                Sum(
+                    F('quantidade') * F('preco_unitario_historico'),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                ),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+        )
+        .order_by('-quantidade_vendida', 'peca__descricao')
+    )
+
+    # Dados serializados para o Chart.js
+    chart_faturamento_data = {
+        'labels': [m['mes_label'] for m in faturamento_mensal_lista],
+        'faturamento': [float(m['faturamento_liquido']) for m in faturamento_mensal_lista],
+        'descontos': [float(m['descontos']) for m in faturamento_mensal_lista],
+        'quantidade_os': [m['quantidade_os'] for m in faturamento_mensal_lista],
+    }
+    chart_servicos_data = {
+        'labels': [s['servico__descricao'] for s in ranking_servicos[:8]],
+        'quantidades': [s['quantidade_executada'] for s in ranking_servicos[:8]],
+        'receitas': [float(s['receita_historica']) for s in ranking_servicos[:8]],
+    }
+    chart_pecas_data = {
+        'labels': [p['peca__descricao'] for p in ranking_pecas[:8]],
+        'quantidades': [p['quantidade_vendida'] for p in ranking_pecas[:8]],
+        'receitas': [float(p['receita_historica']) for p in ranking_pecas[:8]],
+    }
+
+    context = {
+        'titulo': 'Relatórios Gerenciais & Faturamento',
+        'inicio': inicio_str,
+        'fim': fim_str,
+        'faturamento_mensal': faturamento_mensal_lista,
+        'ranking_servicos': ranking_servicos,
+        'ranking_pecas': ranking_pecas,
+        'total_os_concluidas': total_os_concluidas,
+        'faturamento_total_liquido': faturamento_total_liquido,
+        'total_descontos': total_descontos,
+        'ticket_medio': ticket_medio,
+        'chart_faturamento_json': json.dumps(chart_faturamento_data),
+        'chart_servicos_json': json.dumps(chart_servicos_data),
+        'chart_pecas_json': json.dumps(chart_pecas_data),
+    }
+    return render(request, 'relatorios/dashboard.html', context)
+
+
+# ==============================================================================
+# ENDPOINTS TRANSACIONAIS E API DE BACKEND CONSOLIDADOS (FELIPE — SPRINTS 1 A 4)
+# ==============================================================================
+
+def _decimal(valor, nome):
+    try:
+        resultado = Decimal(str(valor or '0'))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValidationError(f'{nome} inválido.')
+    return resultado
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_http_methods(['GET', 'POST'])
+def catalogo_pecas(request):
+    """Lista e cadastra peças (Exclusivo Dono/Gerente — H06)."""
+    form = PecaForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            peca = form.save()
+        messages.success(request, f'Peça "{peca.descricao}" cadastrada.')
+        return redirect('core:sprint1_pecas')
+
+    busca = request.GET.get('busca', '').strip()
+    pecas = Peca.objects.all()
+    if busca:
+        pecas = pecas.filter(descricao__icontains=busca)
+    return render(request, 'catalogo/pecas_list_form.html', {
+        'titulo': 'Catálogo de Peças',
+        'pecas': pecas,
+        'form': form,
+        'termo_busca': busca,
+    })
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_http_methods(['GET', 'POST'])
+def catalogo_servicos(request):
+    """Lista e cadastra serviços (Exclusivo Dono/Gerente — H07)."""
+    form = ServicoForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            servico = form.save()
+        messages.success(request, f'Serviço "{servico.descricao}" cadastrado.')
+        return redirect('core:sprint1_servicos')
+
+    busca = request.GET.get('busca', '').strip()
+    servicos = Servico.objects.all()
+    if busca:
+        servicos = servicos.filter(descricao__icontains=busca)
+    return render(request, 'catalogo/servicos_list_form.html', {
+        'titulo': 'Catálogo de Serviços',
+        'servicos': servicos,
+        'form': form,
+        'termo_busca': busca,
+    })
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_POST
+def excluir_peca_sem_vinculo(request, pk):
+    """Exclui peça apenas quando não há ItemPeca apontando para ela (H09)."""
+    peca = get_object_or_404(Peca, pk=pk)
+    if peca.itens_os.exists():
+        messages.error(request, 'Peças vinculadas a OS não podem ser excluídas.')
+    else:
+        peca.delete()
+        messages.success(request, 'Peça excluída do catálogo.')
+    return redirect('core:sprint1_pecas')
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_POST
+def excluir_servico_sem_vinculo(request, pk):
+    """Exclui serviço apenas quando não há ItemServico apontando para ele (H09)."""
+    servico = get_object_or_404(Servico, pk=pk)
+    if servico.itens_os.exists():
+        messages.error(request, 'Serviços vinculados a OS não podem ser excluídos.')
+    else:
+        servico.delete()
+        messages.success(request, 'Serviço excluído do catálogo.')
+    return redirect('core:sprint1_servicos')
+
+
+@exigir_perfil(*PERFIS_ORCAMENTO)
+@require_POST
+def converter_orcamento_em_os(request):
+    """Cria uma OS pendente congelando os preços do catálogo sem baixar estoque (H12)."""
+    cliente = get_object_or_404(Cliente, pk=request.POST.get('cliente'))
+    veiculo = get_object_or_404(Veiculo, pk=request.POST.get('veiculo'), cliente=cliente)
+    desconto = _decimal(request.POST.get('desconto_percentual', 0), 'Desconto')
+    if not Decimal('0') <= desconto <= Decimal('100'):
+        raise ValidationError('O desconto deve estar entre 0 e 100%.')
+
+    pecas = request.POST.getlist('pecas_id[]')
+    qtd_pecas = request.POST.getlist('pecas_qtd[]')
+    servicos = request.POST.getlist('servicos_id[]')
+    qtd_servicos = request.POST.getlist('servicos_qtd[]')
+    if not pecas and not servicos:
+        raise ValidationError('A OS deve conter ao menos um item.')
+
+    try:
+        with transaction.atomic():
+            ordem = OrdemServico.objects.create(
+                cliente=cliente, veiculo=veiculo, status='pendente',
+                desconto_percentual=desconto,
+                observacoes=request.POST.get('observacoes', '').strip(),
+            )
+            for pk, raw_qtd in zip(pecas, qtd_pecas):
+                if not pk:
+                    continue
+                peca = Peca.objects.get(pk=pk)
+                qtd = int(raw_qtd)
+                if qtd <= 0:
+                    raise ValidationError('A quantidade da peça deve ser positiva.')
+                ItemPeca.objects.create(
+                    ordem=ordem, peca=peca, quantidade=qtd,
+                    preco_unitario_historico=peca.preco,
+                )
+            for pk, raw_qtd in zip(servicos, qtd_servicos):
+                if not pk:
+                    continue
+                servico = Servico.objects.get(pk=pk)
+                qtd = int(raw_qtd)
+                if qtd <= 0:
+                    raise ValidationError('A quantidade do serviço deve ser positiva.')
+                ItemServico.objects.create(
+                    ordem=ordem, servico=servico, quantidade=qtd,
+                    preco_unitario_historico=servico.preco,
+                )
+            recalcular_ordem(ordem)
+    except (Peca.DoesNotExist, Servico.DoesNotExist, ValueError, IntegrityError) as exc:
+        raise ValidationError(f'Itens inválidos ou duplicados: {exc}')
+
+    return JsonResponse({
+        'id': ordem.pk,
+        'status': ordem.status,
+        'total': str(ordem.total),
+        'estoque_baixado': False,
+    }, status=201)
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_POST
+def ajustar_estoque_api(request, pk):
+    """Ajusta estoque com lock de linha e bloqueio de saldo negativo (H08)."""
+    operacao = request.POST.get('operacao')
+    try:
+        quantidade = int(request.POST.get('quantidade', ''))
+    except ValueError:
+        raise ValidationError('Quantidade deve ser um número inteiro.')
+    if quantidade < 0 or operacao not in {'adicionar', 'remover', 'definir'}:
+        raise ValidationError('Operação ou quantidade inválida.')
+
+    with transaction.atomic():
+        peca = Peca.objects.select_for_update().get(pk=pk)
+        if operacao == 'adicionar':
+            novo_saldo = peca.estoque + quantidade
+        elif operacao == 'remover':
+            novo_saldo = peca.estoque - quantidade
+        else:
+            novo_saldo = quantidade
+        if novo_saldo < 0:
+            raise ValidationError('Ajuste recusado: o estoque não pode ficar negativo.')
+        anterior = peca.estoque
+        peca.estoque = novo_saldo
+        peca.save(update_fields=['estoque', 'atualizado_em'])
+
+    return JsonResponse({'peca': peca.pk, 'anterior': anterior, 'estoque': novo_saldo})
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_POST
+def excluir_peca_protegida_api(request, pk):
+    """Exclui somente peça sem vínculo histórico com item de OS (H09)."""
+    with transaction.atomic():
+        peca = Peca.objects.select_for_update().get(pk=pk)
+        if peca.itens_os.exists():
+            raise ValidationError('Peça vinculada a OS não pode ser excluída.')
+        peca.delete()
+    return JsonResponse({'excluida': True})
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_POST
+@transaction.atomic
+def aprovar_os(request, pk):
+    """Aprova e baixa toda a OS em uma única transação serializável por linhas (H15)."""
+    ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+    if ordem.status != 'pendente':
+        raise ValidationError('Somente OS pendente pode ser aprovada.')
+    if ordem.estoque_baixado:
+        raise ValidationError('Esta OS já teve baixa de estoque.')
+
+    itens = list(
+        ItemPeca.objects.select_related('peca')
+        .filter(ordem=ordem)
+        .order_by('peca_id')
+    )
+    peca_ids = [item.peca_id for item in itens]
+    pecas_bloqueadas = {
+        p.id: p for p in Peca.objects.select_for_update().filter(id__in=peca_ids)
+    }
+
+    insuficientes = []
+    for item in itens:
+        peca = pecas_bloqueadas[item.peca_id]
+        if peca.estoque < item.quantidade:
+            insuficientes.append(
+                f'{peca.descricao}: disponível {peca.estoque}, necessário {item.quantidade}'
+            )
+    if insuficientes:
+        raise ValidationError('Estoque insuficiente: ' + '; '.join(insuficientes))
+
+    for item in itens:
+        peca = pecas_bloqueadas[item.peca_id]
+        peca.estoque -= item.quantidade
+        peca.save(update_fields=['estoque', 'atualizado_em'])
+
+    ordem.status = 'aprovada'
+    ordem.estoque_baixado = True
+    ordem.aprovada_em = timezone.now()
+    ordem.save(update_fields=['status', 'estoque_baixado', 'aprovada_em', 'atualizado_em'])
+
+    return JsonResponse({'os': ordem.pk, 'status': ordem.status, 'baixa': True})
+
+
+@exigir_perfil(PERFIL_MECANICO)
+@require_POST
+@transaction.atomic
+def confirmar_uso_peca(request, pk, item_id):
+    """Registra consumo real pelo mecânico sem mexer novamente no estoque (H17)."""
+    ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+    if ordem.status not in {'aprovada', 'em_execucao'}:
+        raise ValidationError('A OS precisa estar aprovada ou em execução.')
+
+    item = get_object_or_404(ItemPeca.objects.select_for_update(), pk=item_id, ordem=ordem)
+    try:
+        quantidade_utilizada = int(request.POST.get('quantidade_utilizada', ''))
+    except ValueError:
+        raise ValidationError('Quantidade utilizada inválida.')
+    if quantidade_utilizada < 0 or quantidade_utilizada > item.quantidade:
+        raise ValidationError('Uso deve estar entre zero e a quantidade aprovada.')
+
+    item.quantidade_utilizada = quantidade_utilizada
+    item.save(update_fields=['quantidade_utilizada'])
+    if ordem.status == 'aprovada':
+        ordem.status = 'em_execucao'
+        ordem.save(update_fields=['status', 'atualizado_em'])
+
+    return JsonResponse({
+        'os': ordem.pk,
+        'item': item.pk,
+        'quantidade_utilizada': item.quantidade_utilizada,
+        'estoque_baixado_novamente': False,
+    })
+
+
+@exigir_perfil(PERFIL_MECANICO)
+@require_POST
+@transaction.atomic
+def concluir_os(request, pk):
+    """Conclui uma OS em execução e grava o instante de encerramento (H18)."""
+    ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=pk)
+    if ordem.status != 'em_execucao':
+        raise ValidationError('Somente OS em execução pode ser concluída.')
+    ordem.status = 'concluida'
+    ordem.data_conclusao = timezone.now()
+    ordem.save(update_fields=['status', 'data_conclusao', 'atualizado_em'])
+    return JsonResponse({'os': ordem.pk, 'status': ordem.status})
+
+
+@exigir_perfil(PERFIL_DONO)
+@require_GET
+def faturamento_mensal(request):
+    """Retorna faturamento líquido somente de OS concluídas sem duplicação N:N (H19)."""
+    qs = OrdemServico.objects.filter(status='concluida')
+    inicio = request.GET.get('inicio')
+    fim = request.GET.get('fim')
+    if inicio:
+        qs = qs.filter(data_conclusao__date__gte=date.fromisoformat(inicio))
+    if fim:
+        qs = qs.filter(data_conclusao__date__lte=date.fromisoformat(fim))
+
+    linhas = (
+        qs.exclude(data_conclusao__isnull=True)
+        .annotate(mes=TruncMonth('data_conclusao'))
+        .values('mes')
+        .annotate(
+            quantidade_os=Count('id', distinct=True),
+            faturamento=Coalesce(
+                Sum('total'),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            descontos=Coalesce(
+                Sum('valor_desconto'),
+                Decimal('0.00'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+        )
+        .order_by('mes')
+    )
+    resultado = [
+        {
+            'mes': linha['mes'].strftime('%Y-%m'),
+            'quantidade_os': linha['quantidade_os'],
+            'faturamento': f"{Decimal(linha['faturamento']):.2f}",
+            'descontos': f"{Decimal(linha['descontos']):.2f}",
+        }
+        for linha in linhas
+    ]
+    return JsonResponse({'resultados': resultado})

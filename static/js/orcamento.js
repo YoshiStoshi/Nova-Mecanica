@@ -34,8 +34,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const spanSubtotalGeral = document.getElementById('subtotalGeral');
     const spanValorDesconto = document.getElementById('valorDesconto');
     const spanTotalFinal = document.getElementById('totalFinal');
+    const btnAbrirModalConversao = document.getElementById('btnAbrirModalConversao');
     const btnConverterOS = document.getElementById('btnConverterOS');
     const formOrcamento = document.getElementById('formOrcamento');
+    const modalConfirmarEl = document.getElementById('modalConfirmarConversao');
+    const resumoModalCliente = document.getElementById('resumoModalCliente');
+    const resumoModalVeiculo = document.getElementById('resumoModalVeiculo');
+    const resumoModalTotal = document.getElementById('resumoModalTotal');
 
     let contadorLinhasPeca = 0;
     let contadorLinhasServico = 0;
@@ -273,10 +278,12 @@ document.addEventListener('DOMContentLoaded', function () {
             descontoInvalido = true;
             erroDesconto.style.display = 'block';
             inputDesconto.classList.add('is-invalid');
+            if (btnAbrirModalConversao) btnAbrirModalConversao.disabled = true;
             btnConverterOS.disabled = true;
         } else {
             erroDesconto.style.display = 'none';
             inputDesconto.classList.remove('is-invalid');
+            if (btnAbrirModalConversao) btnAbrirModalConversao.disabled = false;
             btnConverterOS.disabled = false;
         }
 
@@ -313,27 +320,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
     // 6. Validação ao Submeter e Converter em OS (H12)
     // ==========================================================================
-    formOrcamento.addEventListener('submit', function (e) {
+    function validarOrcamentoAntesDeConverter() {
         const clienteVal = selectCliente.value;
         const veiculoVal = selectVeiculo.value;
 
         if (!clienteVal || !veiculoVal) {
-            e.preventDefault();
             alert('Por favor, selecione tanto o Cliente quanto o Veículo.');
             selectCliente.focus();
             return false;
         }
 
-        const pecasLinhas = tabelaPecasCorpo.querySelectorAll('.linha-item-peca').length;
-        const servicosLinhas = tabelaServicosCorpo.querySelectorAll('.linha-item-servico').length;
-
-        if (pecasLinhas === 0 && servicosLinhas === 0) {
-            e.preventDefault();
-            alert('O orçamento deve conter pelo menos uma Peça ou um Serviço incluído.');
-            return false;
-        }
-
-        // Validação de duplicados no front
         const pecasSelecionadas = [];
         let temDuplicata = false;
         tabelaPecasCorpo.querySelectorAll('.select-peca').forEach(s => {
@@ -355,13 +351,43 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        if (pecasSelecionadas.length === 0 && servicosSelecionados.length === 0) {
+            alert('O orçamento deve conter pelo menos uma Peça ou um Serviço selecionado.');
+            return false;
+        }
+
         if (temDuplicata) {
-            e.preventDefault();
             alert('Atenção: Um mesmo item foi selecionado mais de uma vez. Ajuste a quantidade na mesma linha antes de converter.');
             return false;
         }
 
-        // Desabilita botão para prevenir duplo clique
+        return true;
+    }
+
+    if (btnAbrirModalConversao && modalConfirmarEl) {
+        btnAbrirModalConversao.addEventListener('click', function () {
+            if (!validarOrcamentoAntesDeConverter()) {
+                return;
+            }
+            const clienteOpt = selectCliente.options[selectCliente.selectedIndex];
+            const veiculoOpt = selectVeiculo.options[selectVeiculo.selectedIndex];
+            if (resumoModalCliente) resumoModalCliente.textContent = clienteOpt ? clienteOpt.textContent : '-';
+            if (resumoModalVeiculo) resumoModalVeiculo.textContent = veiculoOpt ? veiculoOpt.textContent : '-';
+            if (resumoModalTotal) resumoModalTotal.textContent = spanTotalFinal.textContent;
+
+            const modal = bootstrap.Modal.getOrCreateInstance(modalConfirmarEl);
+            modal.show();
+        });
+    }
+
+    formOrcamento.addEventListener('submit', function (e) {
+        if (!validarOrcamentoAntesDeConverter()) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Desabilita botões para prevenir duplo clique
+        if (btnAbrirModalConversao) btnAbrirModalConversao.disabled = true;
         btnConverterOS.disabled = true;
         btnConverterOS.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Gerando Ordem de Serviço...';
         return true;

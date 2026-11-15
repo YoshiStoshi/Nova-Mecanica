@@ -153,6 +153,9 @@ class OrdemServico(models.Model):
         default=Decimal('0.00')
     )
     observacoes = models.TextField('Observações', blank=True, default='')
+    estoque_baixado = models.BooleanField('Estoque Baixado', default=False)
+    aprovada_em = models.DateTimeField('Aprovada em', null=True, blank=True)
+    data_conclusao = models.DateTimeField('Concluída em', null=True, blank=True)
     criado_em = models.DateTimeField('Criado em', auto_now_add=True)
     atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
 
@@ -182,6 +185,10 @@ class ItemPeca(models.Model):
         'Quantidade',
         default=1,
         validators=[MinValueValidator(1)]
+    )
+    quantidade_utilizada = models.PositiveIntegerField(
+        'Quantidade Utilizada',
+        default=0
     )
     preco_unitario_historico = models.DecimalField(
         'Preço Unitário Histórico (R$)',

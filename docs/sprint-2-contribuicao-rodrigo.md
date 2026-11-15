@@ -55,11 +55,11 @@ Nesta Sprint 2, concentrei minhas atividades no desenvolvimento da interface din
 
 ## 3. Evidências Técnicas (PRs e Commits)
 
-- `PR #14` — Interface de ajuste de estoque de peças e regras visuais de exclusão protegida
-- `PR #17` — Estrutura de template `orcamento_form.html` e componentes de seleção de veículos
-- `PR #20` — Implementação do script JS modular de cálculo dinâmico de itens, desconto e totalização
-- `PR #22` — Fluxo visual de conversão de orçamento para OS Pendente e prevenção de duplo clique
-- `PR #25` — Sincronização e deploy contínuo das novas funcionalidades no Render
+- `Commit e36db42` / `PR #03` (`c7650c6`) — Implementação completa da Sprint 2:
+  - Interface de ajuste de estoque de peças e regras visuais de exclusão protegida (`templates/catalogo/pecas_list_form.html`)
+  - Estrutura de template `templates/orcamentos/orcamento_form.html`, modal de confirmação de conversão (`#modalConfirmarConversao`) e componentes de seleção de veículos
+  - Implementação do script JS modular (`static/js/orcamento.js`) de cálculo dinâmico de itens N:N, desconto (0% a 100%) e totalização em BRL
+  - Views de orçamento e conversão em OS Pendente (`core/views.py`) e sincronização para deploy no Render
 - `Suíte de Testes` — Testes automatizados em `core/tests/test_sprint1_sprint2.py` executados com 100% de sucesso
 
 ---

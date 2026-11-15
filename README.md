@@ -2,11 +2,10 @@
 
 Sistema de gestão para oficina mecânica, desenvolvido para auxiliar no gerenciamento dos processos e informações de uma oficina. O projeto foi desenvolvido utilizando Python e Django como parte da disciplina de Laboratório de Software 3.
 
-**Deploy:** ainda não publicado
+**Deploy:** `https://nova-mecanica.onrender.com` (Configurado via Render + Gunicorn + WhiteNoise)
 **Equipe:** [Rodrigo de Azevedo Junior 2840482421044 — 
 João Gabriel Cardoso Martarello 2840482421028 — 
 Felipe Delchiaro Malzoni 2840482421025 — 
-Antônio de Brito Soares 2840482421035 c
 Carlos Chen 2840482421030] · Laboratório de Engenharia de Software · ADS Fatec Ribeirão Preto
 
 ## Stack
@@ -177,16 +176,23 @@ Nova Mecanica/
 │   ├── services.py      — Serviços transacionais de OS e itens
 │   └── urls.py          — Rotas da aplicação
 │
-├── templates/           — Templates Django modulares
-│   ├── catalogo/        — Telas de Peças, Estoque e Serviços
-│   ├── orcamentos/      — Montagem dinâmica de orçamentos
-│   ├── usuarios/        — Autenticação e login
-│   ├── core/            — Home/Dashboard, Clientes, Veículos e OS
-│   └── base.html        — Layout mestre com Sidebar e Header sticky
+├── templates/           — Templates Django modulares (Bootstrap 5)
+│   ├── catalogo/        — Telas de Peças, Estoque e Serviços (H06–H09)
+│   ├── orcamentos/      — Montagem dinâmica de orçamentos e conversão (H10–H14)
+│   ├── os/              — Painel de aprovação e baixa atômica de estoque (H15)
+│   ├── veiculos/        — Consulta rápida de histórico por placa (H05)
+│   ├── mecanico/        — Fila de OSs do dia, uso de peças e conclusão (H16–H18)
+│   ├── relatorios/      — Dashboard Gerencial com Chart.js e rankings (H19–H21)
+│   ├── usuarios/        — Autenticação e login (H01–H02)
+│   ├── core/            — Home/Dashboard, Clientes, Veículos e OS (H03–H04)
+│   └── base.html        — Layout mestre com Sidebar (220px) e Header sticky
 │
 ├── static/              — Arquivos estáticos
-│   ├── css/custom.css   — Design system e paleta azul-marinho
-│   └── js/orcamento.js  — Lógica de orçamento em tempo real
+│   ├── css/custom.css          — Design system e paleta azul-marinho
+│   ├── js/orcamento.js         — Lógica de orçamento N:N em tempo real
+│   └── js/dashboard_charts.js  — Gráficos analíticos Chart.js (Faturamento/Rankings)
+│
+├── docs/                — Entregáveis acadêmicos das Sprints 1 a 4 e scripts SQL
 │
 ├── setup/               — Configurações globais do Django
 │   ├── settings.py      — Configurações do projeto e WhiteNoise
@@ -235,10 +241,16 @@ pip freeze > requirements.txt
 
 ## Testes
 
-Para executar os testes automatizados do Django:
+Para executar toda a suíte de testes automatizados (Django Test Runner ou `pytest`):
 
 ```bash
 python manage.py test
+```
+
+Ou utilizando `pytest` (`pytest-django`):
+
+```bash
+pytest
 ```
 
 ## Licença / Uso acadêmico

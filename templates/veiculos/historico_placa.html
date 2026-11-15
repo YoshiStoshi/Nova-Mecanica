@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Histórico por Placa | Nova Mecânica{% endblock %}
+{% block page_title %}Consulta de Histórico de Manutenção por Placa{% endblock %}
+
+{% block content %}
+<!-- Card de Busca Rápida por Placa (H05 - Meta < 3s) -->
+<div class="card card-modern mb-4">
+    <div class="card-modern-body p-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-6">
+                <h2 class="h5 fw-bold text-dark mb-1">
+                    <i class="bi bi-car-front-fill text-primary me-2"></i>Pesquisar Histórico do Veículo
+                </h2>
+                <p class="text-muted small mb-0">
+                    Informe a placa no padrão antigo (<code>ABC-1234</code>) ou Mercosul (<code>ABC1D23</code>) para listar todas as passagens pela oficina.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <form method="get" action="{% url 'core:historico_placa' %}" class="d-flex gap-2">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted">
+                            <i class="bi bi-upc-scan"></i>
+                        </span>
+                        <input type="text"
+                               id="inputBuscaPlaca"
+                               name="placa"
+                               value="{{ termo_placa }}"
+                               class="form-control font-mono text-uppercase fw-bold"
+                               placeholder="Ex: BRA2E19 ou ABC-1234"
+                               maxlength="10"
+                               autocomplete="off"
+                               required>
+                        <button type="submit" class="btn btn-primary-nova px-4 d-flex align-items-center gap-2">
+                            <i class="bi bi-search"></i>
+                            <span>Consultar Placa</span>
+                        </button>
+                    </div>
+                    {% if busca_realizada %}
+                    <a href="{% url 'core:historico_placa' %}" class="btn btn-outline-secondary d-flex align-items-center" title="Limpar busca">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        {% if placas_recentes %}
+        <div class="mt-3 pt-3 border-top d-flex flex-wrap align-items-center gap-2 small">
+            <span class="text-muted fw-medium">Consulta rápida de placas cadastradas:</span>
+            {% for v in placas_recentes %}
+                <a href="{% url 'core:historico_placa' %}?placa={{ v.placa }}"
+                   class="plate-badge text-decoration-none {% if veiculo and veiculo.pk == v.pk %}border-primary bg-primary text-white{% endif %}">
+                    {{ v.placa }}
+                </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==========================================================================
+     CENÁRIO A: PLACA NÃO CADASTRADA NO SISTEMA (CT-012)
+     ========================================================================== -->
+{% if placa_nao_encontrada %}
+<div class="card card-modern border-danger border-opacity-50 mb-4" id="alertaPlacaInexistente">
+    <div class="card-modern-body p-5 text-center">
+        <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle p-3 mb-3">
+            <i class="bi bi-exclamation-diamond-fill fs-1"></i>
+        </div>
+        <h3 class="h5 fw-bold text-dark mb-2">Placa não cadastrada no sistema</h3>
+        <p class="text-muted mb-4">
+            Nenhum veículo foi localizado com a placa <span class="plate-badge mx-1">{{ termo_placa }}</span> na base de dados da oficina.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'core:veiculo_criar' %}" class="btn btn-primary-nova">
+                <i class="bi bi-plus-circle me-1"></i>Cadastrar Novo Veículo
+            </a>
+            <a href="{% url 'core:veiculos' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul me-1"></i>Ver Todos os Veículos
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==========================================================================
+     VEÍCULO LOCALIZADO: EXIBE FICHA DO VEÍCULO E PROPRIETÁRIO
+     ========================================================================== -->
+{% if veiculo %}
+<div class="card card-modern mb-4">
+    <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-3"
+         style="background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%); color: #ffffff;">
+        <div class="d-flex align-items-center gap-3">
+            <span class="plate-badge fs-5 px-3 py-1 bg-white text-dark">{{ veiculo.placa }}</span>
+            <div>
+                <h3 class="h5 fw-bold text-white mb-0">{{ veiculo.marca }} {{ veiculo.modelo }} ({{ veiculo.ano }})</h3>
+                <span class="small text-white-50">
+                    Proprietário: <strong class="text-white">{{ veiculo.cliente.nome }}</strong> · CPF: {{ veiculo.cliente.cpf }} · Tel: {{ veiculo.cliente.telefone }}
+                </span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'core:orcamento_novo' %}" class="btn btn-warning btn-sm fw-semibold">
+                <i class="bi bi-file-earmark-plus me-1"></i>Novo Orçamento para este Veículo
+            </a>
+        </div>
+    </div>
+
+    <div class="card-modern-body p-3 bg-light border-bottom">
+        <div class="row g-3 text-center">
+            <div class="col-sm-4">
+                <span class="text-muted small d-block">Total de Passagens (OSs)</span>
+                <strong class="font-mono fs-5 text-dark">{{ ordens_historico|length }}</strong>
+            </div>
+            <div class="col-sm-4">
+                <span class="text-muted small d-block">Último Registro</span>
+                <strong class="font-mono fs-6 text-dark">
+                    {% if ordens_historico %}{{ ordens_historico.0.criado_em|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+                </strong>
+            </div>
+            <div class="col-sm-4">
+                <span class="text-muted small d-block">Total Histórico Acumulado</span>
+                <strong class="font-mono fs-5 text-primary">R$ {{ total_investido|floatformat:2 }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     CENÁRIO B: VEÍCULO CADASTRADO, MAS SEM HISTÓRICO DE MANUTENÇÃO (CT-059)
+     ========================================================================== -->
+{% if sem_historico_manutencao %}
+<div class="card card-modern border-info border-opacity-50" id="alertaSemHistorico">
+    <div class="card-modern-body p-5 text-center">
+        <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-circle p-3 mb-3">
+            <i class="bi bi-journal-x fs-1"></i>
+        </div>
+        <h3 class="h5 fw-bold text-dark mb-2">Veículo sem histórico de manutenção</h3>
+        <p class="text-muted mb-4">
+            O veículo <strong>{{ veiculo.marca }} {{ veiculo.modelo }}</strong> (placa <span class="plate-badge">{{ veiculo.placa }}</span>) está regularmente cadastrado para <strong>{{ veiculo.cliente.nome }}</strong>, mas ainda não possui nenhuma Ordem de Serviço registrada.
+        </p>
+        <a href="{% url 'core:orcamento_novo' %}" class="btn btn-primary-nova">
+            <i class="bi bi-file-earmark-plus me-1"></i>Abrir Primeiro Orçamento
+        </a>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     CENÁRIO C: LINHA DO TEMPO / TABELA DE ORDENS DE SERVIÇO DO VEÍCULO (CT-011)
+     ========================================================================== -->
+{% else %}
+<div class="d-flex flex-column gap-3">
+    {% for os_item in ordens_historico %}
+    <div class="card card-modern">
+        <div class="card-modern-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold font-mono fs-5 text-dark">OS #{{ os_item.pk }}</span>
+                {% if os_item.status == 'pendente' %}
+                    <span class="badge bg-warning text-dark">Pendente</span>
+                {% elif os_item.status == 'aprovada' %}
+                    <span class="badge bg-info text-dark">Aprovada</span>
+                {% elif os_item.status == 'em_execucao' %}
+                    <span class="badge bg-primary">Em Execução</span>
+                {% elif os_item.status == 'concluida' %}
+                    <span class="badge bg-success">Concluída</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ os_item.get_status_display }}</span>
+                {% endif %}
+                <span class="text-muted small ms-2">
+                    <i class="bi bi-calendar3 me-1"></i>Aberta em {{ os_item.criado_em|date:"d/m/Y H:i" }}
+                </span>
+                {% if os_item.data_conclusao %}
+                <span class="text-success small ms-2">
+                    <i class="bi bi-check2-all me-1"></i>Concluída em {{ os_item.data_conclusao|date:"d/m/Y H:i" }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end">
+                    <span class="text-muted small d-block">Total Líquido Congelado</span>
+                    <span class="font-mono fw-bold fs-5 text-primary">R$ {{ os_item.total|floatformat:2 }}</span>
+                </div>
+                <a href="{% url 'core:ordem_detalhe' os_item.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-eye me-1"></i>Ver OS
+                </a>
+            </div>
+        </div>
+
+        <div class="card-modern-body p-3">
+            {% if os_item.observacoes %}
+            <div class="mb-3 p-2 bg-light rounded border small text-muted">
+                <strong>Diagnóstico / Observações:</strong> {{ os_item.observacoes }}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <!-- Peças Históricas -->
+                <div class="col-md-6">
+                    <h4 class="small fw-bold text-uppercase text-muted mb-2">
+                        <i class="bi bi-boxes me-1"></i>Peças Aplicadas (Preços Históricos)
+                    </h4>
+                    <ul class="list-group list-group-flush border rounded-2 small">
+                        {% for ip in os_item.itens_peca.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ ip.quantidade }}x {{ ip.peca.descricao }}</span>
+                            <span class="font-mono text-dark">
+                                R$ {{ ip.preco_unitario_historico|floatformat:2 }} un · <strong>R$ {{ ip.subtotal|floatformat:2 }}</strong>
+                            </span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Nenhuma peça vinculada.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Serviços Históricos -->
+                <div class="col-md-6">
+                    <h4 class="small fw-bold text-uppercase text-muted mb-2">
+                        <i class="bi bi-wrench me-1"></i>Serviços Executados (Preços Históricos)
+                    </h4>
+                    <ul class="list-group list-group-flush border rounded-2 small">
+                        {% for iserv in os_item.itens_servico.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ iserv.quantidade }}x {{ iserv.servico.descricao }}</span>
+                            <span class="font-mono text-dark">
+                                R$ {{ iserv.preco_unitario_historico|floatformat:2 }} un · <strong>R$ {{ iserv.subtotal|floatformat:2 }}</strong>
+                            </span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">Nenhum serviço vinculado.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Normaliza em tempo real a digitação da placa para maiúsculas
+    const inputPlaca = document.getElementById('inputBuscaPlaca');
+    if (inputPlaca) {
+        inputPlaca.addEventListener('input', function () {
+            this.value = this.value.toUpperCase();
+        });
+    }
+</script>
+{% endblock %}
+
