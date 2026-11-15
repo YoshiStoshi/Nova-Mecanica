@@ -44,3 +44,4 @@ services:
         fromDatabase:
           name: nova-mecanica-db
           property: port
+
