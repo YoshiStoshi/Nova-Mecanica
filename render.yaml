@@ -1,0 +1,46 @@
+databases:
+  - name: nova-mecanica-db
+    databaseName: novamecdb
+    user: novamecuser
+    plan: free
+
+services:
+  - type: web
+    name: nova-mecanica
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate && python manage.py setup_perfis --usuarios-demo
+    startCommand: gunicorn setup.wsgi:application --log-file -
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "127.0.0.1, localhost, .onrender.com"
+      - key: CREATE_DEMO_USERS
+        value: "True"
+      - key: DB_ENGINE
+        value: django.db.backends.postgresql
+      - key: DB_NAME
+        fromDatabase:
+          name: nova-mecanica-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: nova-mecanica-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nova-mecanica-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: nova-mecanica-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nova-mecanica-db
+          property: port
