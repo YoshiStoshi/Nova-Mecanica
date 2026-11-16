@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.models import Cliente, ItemPeca, ItemServico, OrdemServico, Peca, Servico, Veiculo
 
 
-class JoaoSprints3e4Tests(TestCase):
+class MecanicoERelatoriosTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.mecanico = User.objects.create_user('joao_mecanico', password='Teste-local-482!')

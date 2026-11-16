@@ -30,7 +30,7 @@ Nesta Sprint 3, atuei no painel operacional do Mecânico, concentrando minha con
   - Preservação do bloqueio para OSs que não estejam nos estados `aprovada` ou `em_execucao`.
 
 - **Testes Automatizados:**
-  - Criação de `core/tests/test_joao_sprints_3_4.py` com testes específicos para a fila operacional diária e a conclusão da OS.
+  - Criação de `core/tests/test_mecanico_e_relatorios.py` com testes específicos para a fila operacional diária e a conclusão da OS.
   - Validação de que OSs de datas anteriores não aparecem na fila atual e de que a conclusão persiste corretamente status, data e hora.
 
 ---
@@ -48,10 +48,10 @@ Nesta Sprint 3, atuei no painel operacional do Mecânico, concentrando minha con
 
 - `core/views.py` — View `mecanico_os_dia` e fluxo `mecanico_concluir_os`.
 - `templates/mecanico/os_dia.html` — Fila diária, botão de conclusão e histórico das OSs concluídas no dia.
-- `core/tests/test_joao_sprints_3_4.py`:
+- `core/tests/test_mecanico_e_relatorios.py`:
   - `test_h16_painel_exibe_somente_fila_operacional_do_dia`
   - `test_h18_mecanico_conclui_os_com_data_e_hora`
-- **Comando de validação:** `python manage.py test core.tests.test_joao_sprints_3_4`
+- **Comando de validação:** `python manage.py test core.tests.test_mecanico_e_relatorios`
 - **Situação:** alterações validadas localmente e pendentes de commit/PR.
 
 ---

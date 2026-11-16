@@ -49,10 +49,10 @@ Nesta Sprint 4, atuei nas consultas agregadas dos rankings gerenciais e no trata
 
 - `core/views.py` (`relatorios_dashboard`) — Consultas agregadas de serviços e peças.
 - `templates/relatorios/dashboard.html` — Tabelas dos rankings e estados vazios independentes.
-- `core/tests/test_joao_sprints_3_4.py`:
+- `core/tests/test_mecanico_e_relatorios.py`:
   - `test_h20_h21_rankings_agregam_somente_os_concluidas`
   - `test_h20_h21_dashboard_exibe_estados_vazios`
-- **Comando de validação:** `python manage.py test core.tests.test_joao_sprints_3_4`
+- **Comando de validação:** `python manage.py test core.tests.test_mecanico_e_relatorios`
 - **Resultado:** 4 testes do escopo aprovados; suíte completa com 58 testes aprovados e 1 teste PostgreSQL ignorado no ambiente SQLite.
 - **Situação:** alterações validadas localmente e pendentes de commit/PR.
 
