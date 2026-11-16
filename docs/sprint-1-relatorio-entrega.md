@@ -15,7 +15,7 @@
 | Integrante | RA | Papel Principal na Sprint 1 | Relatório Individual |
 |---|---|---|---|
 | **Rodrigo de Azevedo Junior** | `2840482421044` | Arquitetura Django, Layout Base (`base.html`), Login, Telas de Catálogo, WhiteNoise & Deploy | [sprint-1-contribuicao-rodrigo.md](sprint-1-contribuicao-rodrigo.md) |
-| **João Gabriel Cardoso Martarello** | `2840482421028` | Backend de Clientes e Veículos, Validadores de CPF/Placa e Testes Unitários/Integração | [joao-sprint1e2.md](joao-sprint1e2.md) |
+| **João Gabriel Cardoso Martarello** | `2840482421028` | Backend de Clientes e Veículos, UI Bootstrap, validadores de CPF/placa e testes automatizados | [sprint-1-contribuicao-joao.md](sprint-1-contribuicao-joao.md) |
 | **Felipe Delchiaro Malzoni** | `2840482421025` | Backend de Controle de Acesso por Perfil (`@exigir_perfil`) e Views do Catálogo | [sprint-1-contribuicao-felipe.md](sprint-1-contribuicao-felipe.md) |
 | **Carlos Chen** | `2840482421030` | Modelagem Relacional (`models.py`), Constraints PostgreSQL (`CHECK`), Seeds de Homologação e Documentação SQL | [sprint-1-contribuicao-chen.md](sprint-1-contribuicao-chen.md) |
 
@@ -82,7 +82,7 @@ As evidências detalhadas encontram-se em [sprint-1-evidencias-teste.md](sprint-
 - [sprint-1-retrospectiva.md](sprint-1-retrospectiva.md) — Ata Oficial de Retrospectiva da Sprint 1
 - [sprint-1-evidencias-teste.md](sprint-1-evidencias-teste.md) — Caderno de Evidências de Testes da Sprint 1
 - [sprint-1-contribuicao-rodrigo.md](sprint-1-contribuicao-rodrigo.md) — Relatório Individual (Rodrigo de Azevedo Junior)
-- [joao-sprint1e2.md](joao-sprint1e2.md) — Relatório Individual (João Gabriel Cardoso Martarello)
+- [sprint-1-contribuicao-joao.md](sprint-1-contribuicao-joao.md) — Relatório Individual (João Gabriel Cardoso Martarello)
 - [sprint-1-contribuicao-felipe.md](sprint-1-contribuicao-felipe.md) — Relatório Individual (Felipe Delchiaro Malzoni)
 - [sprint-1-contribuicao-chen.md](sprint-1-contribuicao-chen.md) — Relatório Individual (Carlos Chen)
 

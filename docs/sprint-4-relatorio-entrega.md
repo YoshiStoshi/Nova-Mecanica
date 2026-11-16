@@ -17,7 +17,7 @@
 |---|---|---|---|
 | **Rodrigo de Azevedo Junior** | `2840482421044` | Dashboard Gerencial (`dashboard.html`), Gráficos Chart.js (`dashboard_charts.js`), Revisão Final do `README.md` (`H25`) e Deploy Final (`H24`) | [sprint-4-contribuicao-rodrigo.md](sprint-4-contribuicao-rodrigo.md) |
 | **Felipe Delchiaro Malzoni** | `2840482421025` | Endpoint Analítico de Faturamento Mensal (`core/views.py`) e Bateria de Testes de Regressão (`SprintRegressaoTests`) | [sprint-4-contribuicao-felipe.md](sprint-4-contribuicao-felipe.md) |
-| **João Gabriel Cardoso Martarello** | `2840482421028` | Queries Agregadas de Ranking (`H20`, `H21`) com Desempate Alfabético e Testes Ponta a Ponta (`CT-058`) | [joao-sprint1e2.md](joao-sprint1e2.md) |
+| **João Gabriel Cardoso Martarello** | `2840482421028` | Queries agregadas de serviços e peças (`H20`, `H21`), desempate alfabético, estados vazios e testes automatizados | [sprint-4-contribuicao-joao.md](sprint-4-contribuicao-joao.md) |
 | **Carlos Chen** | `2840482421030` | Otimização de Consultas Analíticas sem Duplicação por Joins N:N e Validação Final de Integridade Relacional no PostgreSQL | [sprint-2-contribuicao-chen.md](sprint-2-contribuicao-chen.md) |
 
 ---
