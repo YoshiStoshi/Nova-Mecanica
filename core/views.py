@@ -863,14 +863,16 @@ def mecanico_os_dia(request):
     if not is_mecanico_ou_gerente(request.user):
         raise PermissionDenied('Acesso restrito ao perfil Mecânico ou Dono/Gerente.')
 
+    hoje = timezone.localdate()
     ordens_fila = (
         OrdemServico.objects.filter(status__in=['aprovada', 'em_execucao'])
+        .annotate(data_operacional=Coalesce('aprovada_em', 'atualizado_em'))
+        .filter(data_operacional__date=hoje)
         .select_related('cliente', 'veiculo')
         .prefetch_related('itens_peca__peca', 'itens_servico__servico')
         .order_by('id')
     )
 
-    hoje = timezone.localdate()
     ordens_concluidas_hoje = (
         OrdemServico.objects.filter(status='concluida', data_conclusao__date=hoje)
         .select_related('cliente', 'veiculo')
@@ -879,11 +881,12 @@ def mecanico_os_dia(request):
 
     context = {
         'titulo': 'Painel do Mecânico — Fila do Dia',
+        'hoje': hoje,
         'ordens_fila': ordens_fila,
         'ordens_concluidas_hoje': ordens_concluidas_hoje,
-        'total_aprovadas': OrdemServico.objects.filter(status='aprovada').count(),
-        'total_em_execucao': OrdemServico.objects.filter(status='em_execucao').count(),
-        'total_concluidas_hoje': OrdemServico.objects.filter(status='concluida', data_conclusao__date=hoje).count(),
+        'total_aprovadas': ordens_fila.filter(status='aprovada').count(),
+        'total_em_execucao': ordens_fila.filter(status='em_execucao').count(),
+        'total_concluidas_hoje': ordens_concluidas_hoje.count(),
     }
     return render(request, 'mecanico/os_dia.html', context)
 

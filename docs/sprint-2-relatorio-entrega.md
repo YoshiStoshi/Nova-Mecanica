@@ -15,7 +15,7 @@
 | Integrante | RA | Papel Principal na Sprint 2 | Relatório Individual |
 |---|---|---|---|
 | **Rodrigo de Azevedo Junior** | `2840482421044` | Interface Dinâmica de Orçamento (`orcamento_form.html`), Cálculo em Tempo Real (`orcamento.js`), Modais de Estoque/Exclusão e Conversão em OS | [sprint-2-contribuicao-rodrigo.md](sprint-2-contribuicao-rodrigo.md) |
-| **João Gabriel Cardoso Martarello** | `2840482421028` | Motor de Cálculo Decimal (`calculos.py`), Serviços Transacionais N:N (`services.py`) e Testes de Integração de OS | [joao-sprint1e2.md](joao-sprint1e2.md) |
+| **João Gabriel Cardoso Martarello** | `2840482421028` | Motor de cálculo decimal (`H11`), serviços transacionais N:N (`H13`, `H14`) e testes de integração | [sprint-2-contribuicao-joao.md](sprint-2-contribuicao-joao.md) |
 | **Felipe Delchiaro Malzoni** | `2840482421025` | Endpoints de Conversão de Orçamento, Ajuste de Estoque com `select_for_update` e Exclusão Protegida (`core/views.py`) | [sprint-2-contribuicao-felipe.md](sprint-2-contribuicao-felipe.md) |
 | **Carlos Chen** | `2840482421030` | Modelagem Associativa N:N (`ItemPeca`, `ItemServico`), Constraints PostgreSQL dos Itens da OS e Testes de Preço Histórico Congelado (`test_chen_database.py`) | [sprint-2-contribuicao-chen.md](sprint-2-contribuicao-chen.md) |
 
@@ -76,7 +76,7 @@ As evidências completas encontram-se em [sprint-2-evidencias-teste.md](sprint-2
 - [sprint-2-retrospectiva.md](sprint-2-retrospectiva.md) — Ata Oficial de Retrospectiva da Sprint 2
 - [sprint-2-evidencias-teste.md](sprint-2-evidencias-teste.md) — Caderno de Evidências de Testes da Sprint 2
 - [sprint-2-contribuicao-rodrigo.md](sprint-2-contribuicao-rodrigo.md) — Relatório Individual (Rodrigo de Azevedo Junior)
-- [joao-sprint1e2.md](joao-sprint1e2.md) — Relatório Individual (João Gabriel Cardoso Martarello)
+- [sprint-2-contribuicao-joao.md](sprint-2-contribuicao-joao.md) — Relatório Individual (João Gabriel Cardoso Martarello)
 - [sprint-2-contribuicao-felipe.md](sprint-2-contribuicao-felipe.md) — Relatório Individual (Felipe Delchiaro Malzoni)
 - [sprint-2-contribuicao-chen.md](sprint-2-contribuicao-chen.md) — Relatório Individual (Carlos Chen)
 

@@ -17,7 +17,7 @@
 |---|---|---|---|
 | **Rodrigo de Azevedo Junior** | `2840482421044` | Telas de Aprovação de OS (`aprovar_os.html`), Histórico por Placa (`historico_placa.html`), Fila do Mecânico (`os_dia.html`), Integração de Views e Deploy | [sprint-3-contribuicao-rodrigo.md](sprint-3-contribuicao-rodrigo.md) |
 | **Felipe Delchiaro Malzoni** | `2840482421025` | Backend Transacional de Aprovação com `select_for_update`, Confirmação de Uso sem Nova Baixa e Conclusão de OS (`core/views.py`) | [sprint-3-contribuicao-felipe.md](sprint-3-contribuicao-felipe.md) |
-| **João Gabriel Cardoso Martarello** | `2840482421028` | Serviços de Transição de Status, Bloqueio de Edição Pós-Aprovação e Testes de Regressão | [joao-sprint1e2.md](joao-sprint1e2.md) |
+| **João Gabriel Cardoso Martarello** | `2840482421028` | Painel do Mecânico com fila operacional do dia (`H16`), conclusão da OS com data/hora (`H18`) e testes automatizados | [sprint-3-contribuicao-joao.md](sprint-3-contribuicao-joao.md) |
 | **Carlos Chen** | `2840482421030` | Evolução do Modelo Relacional (`estoque_baixado`, `aprovada_em`, `data_conclusao`, `quantidade_utilizada`), Concorrência (`select_for_update`) e Integridade no Banco | [sprint-2-contribuicao-chen.md](sprint-2-contribuicao-chen.md) |
 
 ---

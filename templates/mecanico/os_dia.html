@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Fila do Mecânico | Nova Mecânica{% endblock %}
-{% block page_title %}Painel Operacional do Mecânico — OSs do Dia{% endblock %}
+{% block page_title %}Painel Operacional do Mecânico — {{ hoje|date:"d/m/Y" }}{% endblock %}
 
 {% block content %}
 <!-- Resumo da Fila Operacional (H16, H17, H18) -->
@@ -13,7 +13,7 @@
                 <i class="bi bi-clipboard2-check"></i>
             </div>
             <div>
-                <span class="text-muted small fw-medium">Aguardando Início (Aprovadas)</span>
+                <span class="text-muted small fw-medium">Aprovadas Hoje</span>
                 <h3 class="mb-0 fw-bold font-mono text-info">{{ total_aprovadas }}</h3>
             </div>
         </div>
@@ -24,7 +24,7 @@
                 <i class="bi bi-gear-wide-connected"></i>
             </div>
             <div>
-                <span class="text-muted small fw-medium">Em Execução na Oficina</span>
+                <span class="text-muted small fw-medium">Em Execução Hoje</span>
                 <h3 class="mb-0 fw-bold font-mono text-primary">{{ total_em_execucao }}</h3>
             </div>
         </div>
@@ -179,8 +179,8 @@
     {% empty %}
     <div class="card card-modern p-5 text-center text-muted">
         <i class="bi bi-emoji-smile fs-1 text-success mb-2"></i>
-        <h3 class="h5 fw-bold text-dark">Fila de execução vazia no momento!</h3>
-        <p class="small mb-0">Não há Ordens de Serviço aprovadas ou em execução pendentes para a equipe mecânica.</p>
+        <h3 class="h5 fw-bold text-dark">Nenhuma OS programada para hoje</h3>
+        <p class="small mb-0">Não há Ordens de Serviço aprovadas ou em execução na fila de {{ hoje|date:"d/m/Y" }}.</p>
     </div>
     {% endfor %}
 </div>
